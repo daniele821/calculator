@@ -1,6 +1,8 @@
 # calculator
 
 ## ideas
-- [ ] implement BigInt
-- [ ] implement Fraction 
+- [ ] BigInt
+    - [ ] to string
+    - [ ] base convertion
+- [ ] Fraction 
 - [ ] expression parser & solver (google how to parse tokens)
