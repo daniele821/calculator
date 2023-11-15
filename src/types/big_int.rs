@@ -1,5 +1,10 @@
-const BIT_PER_ELEM: usize = 8;
+#![allow(dead_code, unused_variables)]
+use std::cmp::Ordering;
 
+/// numbers are stored in base 256 as a vector of u8 values
+/// vector is read left to right, is the rightmost value is in position 0
+/// # Example
+/// vec[1,10,100] represents the number 100-10-1 in base 256
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord)]
 pub struct BigInt {
     num: Vec<u8>,
@@ -16,14 +21,46 @@ impl BigInt {
         }
         BigInt { num, sign }
     }
+}
 
-    pub fn nth_bit(&self, nth: usize) -> Option<u8> {
-        let nth_elem = nth / BIT_PER_ELEM;
-        let nth_bit = nth % BIT_PER_ELEM;
-        let nth_bit_map = 0x01 << nth_bit;
-        self.num
-            .get(nth_elem)
-            .map(|elem| (elem & nth_bit_map) >> nth_bit)
+impl BigInt {
+    fn add(num1: &[u8], num2: &[u8]) -> Vec<u8> {
+        let max_len: usize = usize::max(num1.len(), num2.len());
+        let mut res = Vec::with_capacity(max_len);
+        let mut carry: u8 = 0;
+        for i in 0..max_len {
+            let (sum, overflowed) = num1
+                .get(i)
+                .unwrap_or(&0)
+                .overflowing_add(*num2.get(i).unwrap_or(&0));
+            res.push(sum + carry);
+            if overflowed {
+                carry = 1;
+            } else {
+                carry = 0;
+            }
+        }
+        if carry != 0 {
+            res.push(carry);
+        }
+        res
+    }
+
+    /// if max isn't the actual bigger value, result is incorrect
+    /// make sure max is the bigger value, min is the smallest value
+    fn sub(max: &[u8], min: &[u8]) -> Vec<u8> {
+        Vec::new()
+    }
+
+    fn compare(num1: &[u8], num2: &[u8]) -> Ordering {
+        let max_len: usize = usize::max(num1.len(), num2.len());
+        for i in (0..max_len).rev() {
+            match num1.get(i).unwrap_or(&0).cmp(num2.get(i).unwrap_or(&0)) {
+                Ordering::Equal => (),
+                order => return order,
+            }
+        }
+        Ordering::Equal
     }
 }
 
@@ -32,11 +69,20 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_nth_bit() {
-        let num1 = BigInt::from(vec![0b01010101, 0b11001100, 0b11110000], 1);
-        assert_eq!(num1.nth_bit(0), Some(1), "bit 0 should be 1");
-        assert_eq!(num1.nth_bit(10), Some(1), "bit 10 should be 1");
-        assert_eq!(num1.nth_bit(16), Some(0), "bit 16 should be 0");
-        assert_eq!(num1.nth_bit(24), None, "bit 24 is out of bound");
+    fn add() {
+        let num1: &[u8] = &[12, 34, 127];
+        let num2: &[u8] = &[12, 34, 255];
+        assert_eq!(BigInt::add(num1, num2), vec![24, 68, 126, 1]);
+    }
+
+    #[test]
+    fn cmp() {
+        let num1: &[u8] = &[12, 34, 127];
+        let num2: &[u8] = &[12, 34, 255];
+        let num3: &[u8] = &[12, 34];
+        assert_eq!(BigInt::compare(num1, num2), Ordering::Less);
+        assert_eq!(BigInt::compare(num1, num3), Ordering::Greater);
+        assert_eq!(BigInt::compare(num2, num3), Ordering::Greater);
+        assert_eq!(BigInt::compare(num1, num1), Ordering::Equal);
     }
 }
