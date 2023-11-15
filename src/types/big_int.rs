@@ -27,21 +27,22 @@ impl BigInt {
     fn add(num1: &[u8], num2: &[u8]) -> Vec<u8> {
         let max_len: usize = usize::max(num1.len(), num2.len());
         let mut res = Vec::with_capacity(max_len);
-        let mut carry: u8 = 0;
+        let mut carry = false;
+
         for i in 0..max_len {
-            let (sum, overflowed) = num1
-                .get(i)
-                .unwrap_or(&0)
-                .overflowing_add(*num2.get(i).unwrap_or(&0));
-            res.push(sum + carry);
-            if overflowed {
-                carry = 1;
+            let val_1 = num1.get(i).unwrap_or(&0);
+            let val_2 = num2.get(i).unwrap_or(&0);
+            let (sum, overflowed) = val_1.overflowing_add(*val_2);
+            if carry {
+                // should not overflow, but be careful, as it may be a cause of problems!
+                res.push(sum + 1);
             } else {
-                carry = 0;
+                res.push(sum);
             }
+            carry = overflowed;
         }
-        if carry != 0 {
-            res.push(carry);
+        if carry {
+            res.push(1u8);
         }
         res
     }
@@ -49,7 +50,7 @@ impl BigInt {
     /// if max isn't the actual bigger value, result is incorrect
     /// make sure max is the bigger value, min is the smallest value
     fn sub(max: &[u8], min: &[u8]) -> Vec<u8> {
-        Vec::new()
+        todo!();
     }
 
     fn compare(num1: &[u8], num2: &[u8]) -> Ordering {
