@@ -62,6 +62,54 @@ impl BigUInt {
     }
 }
 
+impl BigUInt {
+    fn from(num: Vec<u8>) -> Self {
+        if num.is_empty() {
+            return Self { num: vec![0] };
+        }
+        let mut res = Self { num };
+        res.strip_leading_zeros();
+        res
+    }
+
+    fn strip_leading_zeros(&mut self) {
+        let mut i = self.num.len();
+        loop {
+            if i <= 1 || self.num.get(i - 1).unwrap_or(&0) != &0u8 {
+                break;
+            }
+            i -= 1;
+        }
+        self.num.truncate(i);
+    }
+
+    fn unsafe_sub(&self, sub: &BigUInt) -> BigUInt {
+        let max = &self.num;
+        let min = &sub.num;
+        let max_len: usize = usize::max(max.len(), min.len());
+        let mut res = Vec::with_capacity(max_len);
+        let mut carry = false;
+
+        for i in 0..max_len {
+            let val_max = max.get(i).unwrap_or(&0);
+            let val_min = min.get(i).unwrap_or(&0);
+            let val_min = val_min.wrapping_add(if carry { 1 } else { 0 });
+            let (sub, underflowed) = val_max.overflowing_sub(val_min);
+            res.push(sub);
+            carry = underflowed;
+        }
+        let mut res = BigUInt::from(res);
+        res.strip_leading_zeros();
+        res
+    }
+
+    fn nth_bit(&self, nth: usize) -> usize {
+        let nth_elem = nth / BIT_PER_ELEM;
+        let nth_bit = nth % BIT_PER_ELEM;
+        ((self.num.get(nth_elem).unwrap_or(&0) & (1 << nth_bit)) >> nth_bit) as usize
+    }
+}
+
 impl Add for BigUInt {
     type Output = BigUInt;
     fn add(self, rhs: Self) -> Self::Output {
@@ -129,54 +177,6 @@ impl PartialEq for BigUInt {
 impl PartialOrd for BigUInt {
     fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
         Some(self.compare(other))
-    }
-}
-
-impl BigUInt {
-    fn from(num: Vec<u8>) -> Self {
-        if num.is_empty() {
-            return Self { num: vec![0] };
-        }
-        let mut res = Self { num };
-        res.strip_leading_zeros();
-        res
-    }
-
-    fn strip_leading_zeros(&mut self) {
-        let mut i = self.num.len();
-        loop {
-            if i <= 1 || self.num.get(i - 1).unwrap_or(&0) != &0u8 {
-                break;
-            }
-            i -= 1;
-        }
-        self.num.truncate(i);
-    }
-
-    fn unsafe_sub(&self, sub: &BigUInt) -> BigUInt {
-        let max = &self.num;
-        let min = &sub.num;
-        let max_len: usize = usize::max(max.len(), min.len());
-        let mut res = Vec::with_capacity(max_len);
-        let mut carry = false;
-
-        for i in 0..max_len {
-            let val_max = max.get(i).unwrap_or(&0);
-            let val_min = min.get(i).unwrap_or(&0);
-            let val_min = val_min.wrapping_add(if carry { 1 } else { 0 });
-            let (sub, underflowed) = val_max.overflowing_sub(val_min);
-            res.push(sub);
-            carry = underflowed;
-        }
-        let mut res = BigUInt::from(res);
-        res.strip_leading_zeros();
-        res
-    }
-
-    fn nth_bit(&self, nth: usize) -> usize {
-        let nth_elem = nth / BIT_PER_ELEM;
-        let nth_bit = nth % BIT_PER_ELEM;
-        ((self.num.get(nth_elem).unwrap_or(&0) & (1 << nth_bit)) >> nth_bit) as usize
     }
 }
 
