@@ -71,23 +71,24 @@ impl BigUInt {
 
 impl Add for BigUInt {
     type Output = BigUInt;
-
     fn add(self, rhs: Self) -> Self::Output {
         self.sum(&rhs)
     }
 }
+
 impl AddAssign for BigUInt {
     fn add_assign(&mut self, rhs: Self) {
         *self = self.sum(&rhs);
     }
 }
+
 impl Sub for BigUInt {
     type Output = BigUInt;
-
     fn sub(self, rhs: Self) -> Self::Output {
         self.unsafe_sub(&rhs)
     }
 }
+
 impl SubAssign for BigUInt {
     fn sub_assign(&mut self, rhs: Self) {
         *self = self.unsafe_sub(&rhs)
@@ -96,7 +97,6 @@ impl SubAssign for BigUInt {
 
 impl Add for &BigUInt {
     type Output = BigUInt;
-
     fn add(self, rhs: Self) -> Self::Output {
         self.sum(rhs)
     }
@@ -110,7 +110,6 @@ impl AddAssign for &mut BigUInt {
 
 impl Sub for &BigUInt {
     type Output = BigUInt;
-
     fn sub(self, rhs: Self) -> Self::Output {
         self.safe_sub(rhs).expect("result is negative")
     }
