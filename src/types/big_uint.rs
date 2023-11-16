@@ -67,6 +67,31 @@ impl BigUInt {
     }
 }
 
+impl Add for BigUInt {
+    type Output = BigUInt;
+
+    fn add(self, rhs: Self) -> Self::Output {
+        self.sum(&rhs)
+    }
+}
+impl AddAssign for BigUInt {
+    fn add_assign(&mut self, rhs: Self) {
+        *self = self.sum(&rhs);
+    }
+}
+impl Sub for BigUInt {
+    type Output = BigUInt;
+
+    fn sub(self, rhs: Self) -> Self::Output {
+        self.unsafe_sub(&rhs)
+    }
+}
+impl SubAssign for BigUInt {
+    fn sub_assign(&mut self, rhs: Self) {
+        *self = self.unsafe_sub(&rhs)
+    }
+}
+
 impl Add for &BigUInt {
     type Output = BigUInt;
 
@@ -166,7 +191,7 @@ mod tests {
         let num1 = BigUInt::from(vec![12, 34, 127]);
         let num2 = BigUInt::from(vec![12, 34, 255]);
         let sum = BigUInt::from(vec![24, 68, 126, 1]);
-        assert!(&num1 + &num2 == sum);
+        assert!(num1 + num2 == sum);
     }
 
     #[test]
