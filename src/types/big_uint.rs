@@ -108,6 +108,23 @@ impl BigUInt {
         let nth_bit = nth % BIT_PER_ELEM;
         ((self.num.get(nth_elem).unwrap_or(&0) & (1 << nth_bit)) >> nth_bit) as usize
     }
+
+    fn first_bit(&self) -> Option<usize> {
+        let bit_len = self.num.len() * BIT_PER_ELEM;
+        (0..bit_len)
+            .map(|i| (i, self.nth_bit(i)))
+            .find(|(_, bit)| bit == &1)
+            .map(|(index, bit)| index)
+    }
+
+    fn last_bit(&self) -> Option<usize> {
+        let bit_len = self.num.len() * BIT_PER_ELEM;
+        (0..bit_len)
+            .rev()
+            .map(|i| (i, self.nth_bit(i)))
+            .find(|(_, bit)| bit == &1)
+            .map(|(index, bit)| index)
+    }
 }
 
 impl Add for BigUInt {
@@ -223,5 +240,15 @@ mod tests {
             .reduce(|i, j| i + &j)
             .unwrap_or(String::from(""));
         assert_eq!(actual, expected);
+    }
+
+    #[test]
+    fn first_last_bit() {
+        let num = BigUInt::from(vec![0b00101110, 0b00011100]);
+        for i in 0..16 {
+            println!("{i:<2} ---> {}", num.nth_bit(i));
+        }
+        assert_eq!(num.first_bit(), Some(1));
+        assert_eq!(num.last_bit(), Some(12));
     }
 }
