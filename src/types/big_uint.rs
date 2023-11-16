@@ -60,6 +60,26 @@ impl BigUInt {
             Ordering::Greater => Some(self.unsafe_sub(sub)),
         }
     }
+
+    pub fn unsafe_sub(&self, sub: &BigUInt) -> BigUInt {
+        let max = &self.num;
+        let min = &sub.num;
+        let max_len: usize = usize::max(max.len(), min.len());
+        let mut res = Vec::with_capacity(max_len);
+        let mut carry = false;
+
+        for i in 0..max_len {
+            let val_max = max.get(i).unwrap_or(&0);
+            let val_min = min.get(i).unwrap_or(&0);
+            let val_min = val_min.wrapping_add(if carry { 1 } else { 0 });
+            let (sub, underflowed) = val_max.overflowing_sub(val_min);
+            res.push(sub);
+            carry = underflowed;
+        }
+        let mut res = BigUInt::from(res);
+        res.strip_leading_zeros();
+        res
+    }
 }
 
 impl BigUInt {
@@ -81,26 +101,6 @@ impl BigUInt {
             i -= 1;
         }
         self.num.truncate(i);
-    }
-
-    fn unsafe_sub(&self, sub: &BigUInt) -> BigUInt {
-        let max = &self.num;
-        let min = &sub.num;
-        let max_len: usize = usize::max(max.len(), min.len());
-        let mut res = Vec::with_capacity(max_len);
-        let mut carry = false;
-
-        for i in 0..max_len {
-            let val_max = max.get(i).unwrap_or(&0);
-            let val_min = min.get(i).unwrap_or(&0);
-            let val_min = val_min.wrapping_add(if carry { 1 } else { 0 });
-            let (sub, underflowed) = val_max.overflowing_sub(val_min);
-            res.push(sub);
-            carry = underflowed;
-        }
-        let mut res = BigUInt::from(res);
-        res.strip_leading_zeros();
-        res
     }
 
     fn nth_bit(&self, nth: usize) -> usize {
