@@ -13,7 +13,7 @@ pub struct BigUInt {
 }
 
 impl BigUInt {
-    pub fn compare(&self, compared: &BigUInt) -> Ordering {
+    pub fn compare(&self, compared: &Self) -> Ordering {
         let this = &self.num;
         let other = &compared.num;
         let max_len: usize = usize::max(this.len(), other.len());
@@ -26,7 +26,7 @@ impl BigUInt {
         Ordering::Equal
     }
 
-    pub fn sum(&self, adder: &BigUInt) -> BigUInt {
+    pub fn sum(&self, adder: &Self) -> Self {
         let this = &self.num;
         let other = &adder.num;
         let max_len: usize = usize::max(this.len(), other.len());
@@ -45,7 +45,7 @@ impl BigUInt {
         BigUInt::from(res)
     }
 
-    pub fn abs_sub(&self, sub: &BigUInt) -> BigUInt {
+    pub fn abs_sub(&self, sub: &Self) -> Self {
         match self.compare(sub) {
             Ordering::Equal => BigUInt::from(vec![0]),
             Ordering::Less => sub.unsafe_sub(self),
@@ -53,7 +53,7 @@ impl BigUInt {
         }
     }
 
-    pub fn safe_sub(&self, sub: &BigUInt) -> Option<BigUInt> {
+    pub fn safe_sub(&self, sub: &Self) -> Option<Self> {
         match self.compare(sub) {
             Ordering::Equal => Some(BigUInt::from(vec![0])),
             Ordering::Less => None,
@@ -61,7 +61,7 @@ impl BigUInt {
         }
     }
 
-    pub fn unsafe_sub(&self, sub: &BigUInt) -> BigUInt {
+    pub fn unsafe_sub(&self, sub: &Self) -> Self {
         let max = &self.num;
         let min = &sub.num;
         let max_len: usize = usize::max(max.len(), min.len());
@@ -109,18 +109,18 @@ impl BigUInt {
         ((self.num.get(nth_elem).unwrap_or(&0) & (1 << nth_bit)) >> nth_bit) as usize
     }
 
-    fn first_bit(&self) -> Option<usize> {
+    fn biggest_bit(&self) -> Option<usize> {
         let bit_len = self.num.len() * BIT_PER_ELEM;
         (0..bit_len)
+            .rev()
             .map(|i| (i, self.nth_bit(i)))
             .find(|(_, bit)| bit == &1)
             .map(|(index, bit)| index)
     }
 
-    fn last_bit(&self) -> Option<usize> {
+    fn smallest_bit(&self) -> Option<usize> {
         let bit_len = self.num.len() * BIT_PER_ELEM;
         (0..bit_len)
-            .rev()
             .map(|i| (i, self.nth_bit(i)))
             .find(|(_, bit)| bit == &1)
             .map(|(index, bit)| index)
@@ -268,7 +268,7 @@ mod tests {
         for i in 0..16 {
             println!("{i:<2} ---> {}", num.nth_bit(i));
         }
-        assert_eq!(num.first_bit(), Some(1));
-        assert_eq!(num.last_bit(), Some(12));
+        assert_eq!(num.biggest_bit(), Some(12));
+        assert_eq!(num.smallest_bit(), Some(1));
     }
 }
