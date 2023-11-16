@@ -15,7 +15,9 @@ impl BigUInt {
         if num.is_empty() {
             return Self { num: vec![0] };
         }
-        Self { num }
+        let mut res = Self { num };
+        res.strip_leading_zeros();
+        res
     }
 
     pub fn compare(&self, compared: &BigUInt) -> Ordering {
