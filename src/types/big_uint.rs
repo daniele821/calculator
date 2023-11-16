@@ -5,21 +5,14 @@ use std::{
     ops::{Add, AddAssign, Sub, SubAssign},
 };
 
+const BIT_PER_ELEM: usize = 8;
+
 #[derive(Debug, Clone)]
 pub struct BigUInt {
     num: Vec<u8>,
 }
 
 impl BigUInt {
-    pub fn from(num: Vec<u8>) -> Self {
-        if num.is_empty() {
-            return Self { num: vec![0] };
-        }
-        let mut res = Self { num };
-        res.strip_leading_zeros();
-        res
-    }
-
     pub fn compare(&self, compared: &BigUInt) -> Ordering {
         let this = &self.num;
         let other = &compared.num;
@@ -140,6 +133,15 @@ impl PartialOrd for BigUInt {
 }
 
 impl BigUInt {
+    fn from(num: Vec<u8>) -> Self {
+        if num.is_empty() {
+            return Self { num: vec![0] };
+        }
+        let mut res = Self { num };
+        res.strip_leading_zeros();
+        res
+    }
+
     fn strip_leading_zeros(&mut self) {
         let mut i = self.num.len();
         loop {
@@ -169,6 +171,12 @@ impl BigUInt {
         let mut res = BigUInt::from(res);
         res.strip_leading_zeros();
         res
+    }
+
+    fn nth_bit(&self, nth: usize) -> usize {
+        let nth_elem = nth / BIT_PER_ELEM;
+        let nth_bit = nth % BIT_PER_ELEM;
+        ((self.num.get(nth_elem).unwrap_or(&0) & (1 << nth_bit)) >> nth_bit) as usize
     }
 }
 
@@ -204,5 +212,16 @@ mod tests {
         assert!(&sum - &num1 == num2);
         assert!(&sum - &num2 == num1);
         let should_panic = &num1 - &sum;
+    }
+
+    #[test]
+    fn nth_bit() {
+        let num = BigUInt::from(vec![0b00110011, 0b11110000]);
+        let expected = String::from("1100110000001111");
+        let actual = (0..16)
+            .map(|i| num.nth_bit(i).to_string())
+            .reduce(|i, j| i + &j)
+            .unwrap_or(String::from(""));
+        assert_eq!(actual, expected);
     }
 }
