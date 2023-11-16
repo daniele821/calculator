@@ -2,7 +2,7 @@
 
 use std::{
     cmp::Ordering,
-    ops::{Add, AddAssign, Sub, SubAssign},
+    ops::{Add, AddAssign, Mul, MulAssign, Sub, SubAssign},
 };
 
 const BIT_PER_ELEM: usize = 8;
@@ -80,6 +80,10 @@ impl BigUInt {
         res.strip_leading_zeros();
         res
     }
+
+    pub fn multiply(&self, factor: &Self) -> Self {
+        todo!()
+    }
 }
 
 impl BigUInt {
@@ -153,6 +157,19 @@ impl SubAssign for BigUInt {
     }
 }
 
+impl Mul for BigUInt {
+    type Output = Self;
+    fn mul(self, rhs: Self) -> Self::Output {
+        self.multiply(&rhs)
+    }
+}
+
+impl MulAssign for BigUInt {
+    fn mul_assign(&mut self, rhs: Self) {
+        *self = self.multiply(&rhs);
+    }
+}
+
 impl Add for &BigUInt {
     type Output = BigUInt;
     fn add(self, rhs: Self) -> Self::Output {
@@ -176,6 +193,19 @@ impl Sub for &BigUInt {
 impl SubAssign for &mut BigUInt {
     fn sub_assign(&mut self, rhs: Self) {
         **self = self.safe_sub(rhs).expect("result is negative");
+    }
+}
+
+impl Mul for &BigUInt {
+    type Output = BigUInt;
+    fn mul(self, rhs: Self) -> Self::Output {
+        self.multiply(rhs)
+    }
+}
+
+impl MulAssign for &mut BigUInt {
+    fn mul_assign(&mut self, rhs: Self) {
+        **self = self.multiply(rhs)
     }
 }
 
@@ -270,5 +300,13 @@ mod tests {
         }
         assert_eq!(num.biggest_bit(), Some(12));
         assert_eq!(num.smallest_bit(), Some(1));
+    }
+
+    #[test]
+    fn multiply() {
+        let num1 = BigUInt::from(vec![12]);
+        let num2 = BigUInt::from(vec![34]);
+        let res1 = BigUInt::from(vec![0b10011000, 1]);
+        assert_eq!(&num1 * &num2, res1);
     }
 }
