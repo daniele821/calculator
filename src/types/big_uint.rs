@@ -1,8 +1,11 @@
 #![allow(dead_code, unused)]
 
-use std::cmp::Ordering;
+use std::{
+    cmp::Ordering,
+    ops::{Add, AddAssign, Sub, SubAssign},
+};
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct BigUInt {
     num: Vec<u8>,
 }
@@ -28,7 +31,7 @@ impl BigUInt {
         Ordering::Equal
     }
 
-    pub fn add(&self, adder: &BigUInt) -> BigUInt {
+    pub fn sum(&self, adder: &BigUInt) -> BigUInt {
         let this = &self.num;
         let other = &adder.num;
         let max_len: usize = usize::max(this.len(), other.len());
@@ -47,7 +50,82 @@ impl BigUInt {
         BigUInt::from(res)
     }
 
-    pub fn sub(&self, sub: &BigUInt) -> BigUInt {
+    pub fn abs_sub(&self, sub: &BigUInt) -> BigUInt {
+        match self.compare(sub) {
+            Ordering::Equal => BigUInt::from(vec![0]),
+            Ordering::Less => sub.unsafe_sub(self),
+            Ordering::Greater => self.unsafe_sub(sub),
+        }
+    }
+
+    pub fn safe_sub(&self, sub: &BigUInt) -> Option<BigUInt> {
+        match self.compare(sub) {
+            Ordering::Equal => Some(BigUInt::from(vec![0])),
+            Ordering::Less => None,
+            Ordering::Greater => Some(self.unsafe_sub(sub)),
+        }
+    }
+}
+
+impl Add for &BigUInt {
+    type Output = BigUInt;
+
+    fn add(self, rhs: Self) -> Self::Output {
+        self.sum(rhs)
+    }
+}
+
+impl AddAssign for &mut BigUInt {
+    fn add_assign(&mut self, rhs: Self) {
+        **self = self.sum(rhs);
+    }
+}
+
+impl Sub for &BigUInt {
+    type Output = BigUInt;
+
+    fn sub(self, rhs: Self) -> Self::Output {
+        self.safe_sub(rhs).expect("result is negative")
+    }
+}
+
+impl SubAssign for &mut BigUInt {
+    fn sub_assign(&mut self, rhs: Self) {
+        **self = self.safe_sub(rhs).expect("result is negative");
+    }
+}
+
+impl Default for BigUInt {
+    fn default() -> Self {
+        BigUInt::from(vec![0])
+    }
+}
+
+impl PartialEq for BigUInt {
+    fn eq(&self, other: &Self) -> bool {
+        self.compare(other) == Ordering::Equal
+    }
+}
+
+impl PartialOrd for BigUInt {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        Some(self.compare(other))
+    }
+}
+
+impl BigUInt {
+    fn strip_leading_zeros(&mut self) {
+        let mut i = self.num.len();
+        loop {
+            if i <= 1 || self.num.get(i - 1).unwrap_or(&0) != &0u8 {
+                break;
+            }
+            i -= 1;
+        }
+        self.num.truncate(i);
+    }
+
+    fn unsafe_sub(&self, sub: &BigUInt) -> BigUInt {
         let max = &self.num;
         let min = &sub.num;
         let max_len: usize = usize::max(max.len(), min.len());
@@ -68,19 +146,6 @@ impl BigUInt {
     }
 }
 
-impl BigUInt {
-    fn strip_leading_zeros(&mut self) {
-        let mut i = self.num.len();
-        loop {
-            if i <= 1 || self.num.get(i - 1).unwrap_or(&0) != &0u8 {
-                break;
-            }
-            i -= 1;
-        }
-        self.num.truncate(i);
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -90,37 +155,28 @@ mod tests {
         let num1 = BigUInt::from(vec![12, 34, 127]);
         let num2 = BigUInt::from(vec![12, 34, 255]);
         let num3 = BigUInt::from(vec![12, 34]);
-        assert_eq!(num1.compare(&num2), Ordering::Less);
-        assert_eq!(num1.compare(&num3), Ordering::Greater);
-        assert_eq!(num2.compare(&num3), Ordering::Greater);
-        assert_eq!(num1.compare(&num1), Ordering::Equal);
+        assert!(num1 < num2);
+        assert!(num1 > num3);
+        assert!(num2 > num3);
+        assert!(num1 == num1);
     }
 
     #[test]
-    fn add() {
+    fn sum() {
         let num1 = BigUInt::from(vec![12, 34, 127]);
         let num2 = BigUInt::from(vec![12, 34, 255]);
         let sum = BigUInt::from(vec![24, 68, 126, 1]);
-        assert_eq!(num1.add(&num2).compare(&sum), Ordering::Equal);
+        assert!(&num1 + &num2 == sum);
     }
 
     #[test]
+    #[should_panic]
     fn sub() {
         let num1 = BigUInt::from(vec![12, 34, 127]);
         let num2 = BigUInt::from(vec![12, 34, 255]);
         let sum = BigUInt::from(vec![24, 68, 126, 1]);
-        assert_eq!(sum.sub(&num1).compare(&num2), Ordering::Equal);
-        assert_eq!(sum.sub(&num2).compare(&num1), Ordering::Equal);
-    }
-
-    #[test]
-    fn strip_leading_zeros() {
-        let mut num1 = BigUInt::from(vec![12, 34, 64, 0, 0]);
-        let mut num2 = BigUInt::from(vec![12, 34, 64]);
-        let res = vec![12, 34, 64];
-        num1.strip_leading_zeros();
-        num2.strip_leading_zeros();
-        assert_eq!(res, num1.num);
-        assert_eq!(res, num2.num);
+        assert!(&sum - &num1 == num2);
+        assert!(&sum - &num2 == num1);
+        let should_panic = &num1 - &sum;
     }
 }
