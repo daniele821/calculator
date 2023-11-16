@@ -209,7 +209,7 @@ mod tests {
         assert!(num1 < num2);
         assert!(num1 > num3);
         assert!(num2 > num3);
-        assert!(num1 == num1);
+        assert_eq!(num1, num1);
     }
 
     #[test]
@@ -217,7 +217,7 @@ mod tests {
         let num1 = BigUInt::from(vec![12, 34, 127]);
         let num2 = BigUInt::from(vec![12, 34, 255]);
         let sum = BigUInt::from(vec![24, 68, 126, 1]);
-        assert!(num1 + num2 == sum);
+        assert_eq!(num1 + num2, sum);
     }
 
     #[test]
@@ -226,9 +226,29 @@ mod tests {
         let num1 = BigUInt::from(vec![12, 34, 127]);
         let num2 = BigUInt::from(vec![12, 34, 255]);
         let sum = BigUInt::from(vec![24, 68, 126, 1]);
-        assert!(&sum - &num1 == num2);
-        assert!(&sum - &num2 == num1);
+        assert_eq!(&sum - &num1, num2);
+        assert_eq!(&sum - &num2, num1);
+        assert_eq!(&sum - &num2, sum.safe_sub(&num2).unwrap_or_default());
+        assert_eq!(&sum - &num2, sum.abs_sub(&num2));
+        assert_eq!(num1.safe_sub(&sum), None);
+        assert_eq!(num1.abs_sub(&sum), &sum - &num2);
         let should_panic = &num1 - &sum;
+    }
+
+    #[test]
+    fn strip_leading_zeros() {
+        let mut num1 = BigUInt::from(vec![0, 0, 0]);
+        let mut num2 = BigUInt::from(vec![24, 0, 0]);
+        let mut num3 = BigUInt::from(vec![24, 12]);
+        let res1 = BigUInt::from(vec![0]);
+        let res2 = BigUInt::from(vec![24]);
+        let res3 = BigUInt::from(vec![24, 12]);
+        num1.strip_leading_zeros();
+        num2.strip_leading_zeros();
+        num3.strip_leading_zeros();
+        assert_eq!(num1.num, res1.num);
+        assert_eq!(num2.num, res2.num);
+        assert_eq!(num3.num, res3.num);
     }
 
     #[test]
