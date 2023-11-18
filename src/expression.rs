@@ -1,8 +1,7 @@
-#![allow(dead_code, unused)]
-
-use std::{thread::sleep, time::Duration};
+// #![allow(dead_code, unused)]
 
 use fraction::Fraction;
+use std::str::FromStr;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Token {
@@ -19,8 +18,7 @@ pub enum Token {
 
 pub fn parse_tokens(expr: &str) -> Result<Vec<Token>, String> {
     let mut res = Vec::new();
-    let mut chars: Vec<char> = expr.chars().collect();
-    let mut chars_slice = &chars[..];
+    let mut chars_slice = &(expr.chars().collect::<Vec<char>>())[..];
     while !chars_slice.is_empty() {
         let (token, char_slice_tmp) = parse_token(chars_slice)?;
         chars_slice = skip_whitespaces(char_slice_tmp);
@@ -46,7 +44,14 @@ fn parse_token(chars: &[char]) -> Result<(Token, &[char]), String> {
 }
 
 fn parse_number(chars: &[char]) -> Result<(Token, &[char]), String> {
-    todo!();
+    let num_str = chars
+        .iter()
+        .take_while(|c| c.is_ascii_digit() || c == &&'.')
+        .collect::<String>();
+    let num_len = num_str.chars().count();
+    let err_msg = format!("{num_str} in not a valid number!");
+    let number = Fraction::from_str(&num_str).or(Err(err_msg))?;
+    Ok((Token::Number(number), &chars[num_len..]))
 }
 
 pub fn skip_whitespaces(chars: &[char]) -> &[char] {
@@ -83,6 +88,7 @@ mod tests {
             StartPriorityBlock,
             EndPriorityBlock,
             Number(Fraction::from_str("12.12").unwrap()),
+            EndPriorityBlock,
         ]);
         let actual_expr_tokens = super::parse_tokens(&expr);
         assert_eq!(actual_expr_tokens, expected_expr_tokens);
