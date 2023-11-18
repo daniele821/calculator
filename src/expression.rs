@@ -15,27 +15,30 @@ pub enum Token {
     Number(Fraction),
 }
 
-pub fn parse_tokens(expr: &str) -> Result<Vec<Token>, &'static str> {
+pub fn parse_tokens(expr: &str) -> Result<Vec<Token>, String> {
     let mut res = Vec::new();
-    let mut str = expr;
-    while !str.is_empty() {
-        res.push(parse_token(str)?);
+    let mut chars: Vec<char> = expr.chars().collect();
+    let chars_slice = &chars[..];
+    while chars_slice.is_empty() {
+        let (token, chars_slice) = parse_token(chars_slice)?;
+        res.push(token);
     }
     Ok(res)
 }
 
-fn parse_token(mut str: &str) -> Result<Token, &'static str> {
-    let mut chars = str.chars().enumerate();
-    match chars.next().map(|(i, c)| c) {
-        None => panic!("string to be parsed is empty!"),
-        Some(char) => match char {
-            '*' => Token::Multiplication,
-            '+' => Token::Addition,
-            '0'..='9' => todo!(),
-            _ => return Err("\"{c}\" is not a valid token!"),
-        },
-    };
-    todo!()
+fn parse_token(chars: &[char]) -> Result<(Token, &[char]), String> {
+    let char = chars.first().ok_or("cannot parse empty string!")?;
+    match char {
+        '*' => Ok((Token::Multiplication, &chars[1..])),
+        '+' => Ok((Token::Addition, &chars[1..])),
+        '%' => Ok((Token::Module, &chars[1..])),
+        '/' => Ok((Token::Division, &chars[1..])),
+        '-' => Ok((Token::Subtraction, &chars[1..])),
+        '^' => Ok((Token::Elevation, &chars[1..])),
+        '(' => Ok((Token::StartPriorityBlock, &chars[1..])),
+        ')' => Ok((Token::EndPriorityBlock, &chars[1..])),
+        char => Err(format!("\"{char}\" is not a valid token!")),
+    }
 }
 
 #[cfg(test)]
