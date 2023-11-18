@@ -1,5 +1,7 @@
 #![allow(dead_code, unused)]
 
+use std::{thread::sleep, time::Duration};
+
 use fraction::Fraction;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -18,9 +20,10 @@ pub enum Token {
 pub fn parse_tokens(expr: &str) -> Result<Vec<Token>, String> {
     let mut res = Vec::new();
     let mut chars: Vec<char> = expr.chars().collect();
-    let chars_slice = &chars[..];
-    while chars_slice.is_empty() {
-        let (token, chars_slice) = parse_token(chars_slice)?;
+    let mut chars_slice = &chars[..];
+    while !chars_slice.is_empty() {
+        let (token, char_slice_tmp) = parse_token(chars_slice)?;
+        chars_slice = skip_whitespaces(char_slice_tmp);
         res.push(token);
     }
     Ok(res)
@@ -37,8 +40,22 @@ fn parse_token(chars: &[char]) -> Result<(Token, &[char]), String> {
         '^' => Ok((Token::Elevation, &chars[1..])),
         '(' => Ok((Token::StartPriorityBlock, &chars[1..])),
         ')' => Ok((Token::EndPriorityBlock, &chars[1..])),
-        char => Err(format!("\"{char}\" is not a valid token!")),
+        '0'..='9' => parse_number(chars),
+        char => Err(format!("'{char}' is not a valid token!")),
     }
+}
+
+fn parse_number(chars: &[char]) -> Result<(Token, &[char]), String> {
+    todo!();
+}
+
+pub fn skip_whitespaces(chars: &[char]) -> &[char] {
+    for i in 0..chars.len() {
+        if !chars[i].is_whitespace() {
+            return &chars[i..];
+        }
+    }
+    &[]
 }
 
 #[cfg(test)]
