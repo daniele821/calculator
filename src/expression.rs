@@ -1,7 +1,7 @@
-// #![allow(dead_code, unused)]
+#![allow(dead_code, unused)]
 
 use fraction::Fraction;
-use std::str::FromStr;
+use std::{env, str::FromStr};
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Token {
@@ -16,6 +16,17 @@ pub enum Token {
     Number(Fraction),
 }
 
+pub fn run() -> Result<Fraction, String> {
+    let args = collect_args();
+    let tokens = parse_tokens(&args)?;
+    all_checks_on_tokens(&tokens)?;
+    todo!();
+}
+
+pub fn collect_args() -> String {
+    env::args().skip(1).map(|i| i + " ").collect::<String>()
+}
+
 pub fn parse_tokens(expr: &str) -> Result<Vec<Token>, String> {
     let mut res = Vec::new();
     let mut chars_slice = &(expr.chars().collect::<Vec<char>>())[..];
@@ -25,6 +36,11 @@ pub fn parse_tokens(expr: &str) -> Result<Vec<Token>, String> {
         res.push(token);
     }
     Ok(res)
+}
+
+pub fn all_checks_on_tokens(tokens: &[Token]) -> Result<(), String> {
+    check_blocks(tokens)?;
+    Ok(())
 }
 
 fn parse_token(chars: &[char]) -> Result<(Token, &[char]), String> {
@@ -54,13 +70,31 @@ fn parse_number(chars: &[char]) -> Result<(Token, &[char]), String> {
     Ok((Token::Number(number), &chars[num_len..]))
 }
 
-pub fn skip_whitespaces(chars: &[char]) -> &[char] {
+fn skip_whitespaces(chars: &[char]) -> &[char] {
     for i in 0..chars.len() {
         if !chars[i].is_whitespace() {
             return &chars[i..];
         }
     }
     &[]
+}
+
+fn check_blocks(tokens: &[Token]) -> Result<(), String> {
+    let err_msg = String::from("blocks are not balanced");
+    let mut stack = Vec::<Token>::new();
+    for token in tokens {
+        match token {
+            Token::StartPriorityBlock => stack.push(Token::StartPriorityBlock),
+            Token::EndPriorityBlock => {
+                stack.pop().ok_or(err_msg.clone())?;
+            }
+            _ => (),
+        };
+    }
+    if !stack.is_empty() {
+        return Err(err_msg);
+    }
+    Ok(())
 }
 
 #[cfg(test)]
@@ -97,5 +131,35 @@ mod tests {
         let wrong_expr2 = String::from("(12.34'54 + 12)");
         assert!(super::parse_tokens(&wrong_expr1).is_err());
         assert!(super::parse_tokens(&wrong_expr2).is_err());
+    }
+
+    #[test]
+    fn check_blocks() {
+        let tokens_valid_1: &[Token] = &[];
+        let tokens_valid_2: &[Token] = &[Token::StartPriorityBlock, Token::EndPriorityBlock];
+        let tokens_valid_3: &[Token] = &[
+            Token::StartPriorityBlock,
+            Token::EndPriorityBlock,
+            Token::StartPriorityBlock,
+            Token::EndPriorityBlock,
+        ];
+        let tokens_invalid_1: &[Token] = &[
+            Token::StartPriorityBlock,
+            Token::EndPriorityBlock,
+            Token::EndPriorityBlock,
+        ];
+        let tokens_invalid_2: &[Token] = &[
+            Token::StartPriorityBlock,
+            Token::StartPriorityBlock,
+            Token::EndPriorityBlock,
+        ];
+        let tokens_invalid_3: &[Token] = &[Token::EndPriorityBlock, Token::StartPriorityBlock];
+
+        assert!(super::check_blocks(tokens_valid_1).is_ok());
+        assert!(super::check_blocks(tokens_valid_2).is_ok());
+        assert!(super::check_blocks(tokens_valid_3).is_ok());
+        assert!(super::check_blocks(tokens_invalid_1).is_err());
+        assert!(super::check_blocks(tokens_invalid_2).is_err());
+        assert!(super::check_blocks(tokens_invalid_3).is_err());
     }
 }
