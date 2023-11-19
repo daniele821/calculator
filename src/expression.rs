@@ -6,9 +6,18 @@ use std::{env, str::FromStr};
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Token {
     Number(Fraction),
+    /// - Operator between two expressions, and returns a Number.
+    /// - Example: 12 '+' (12 '/' 56)
     BinaryOperator(String),
+    /// - Start of block defined by two characters.
+    /// - Example: '(' expr )
     StartBlock(String),
+    /// - End of block defined by two characters.
+    /// - Example: ( expr ')'
     EndBlock(String),
+    /// - Start/end of block defined by a single character
+    /// - Example: '|' expr '|'
+    UnaryBlock(String),
 }
 
 pub fn run() -> Result<Fraction, String> {
@@ -64,6 +73,7 @@ fn parse_token(chars: &[char]) -> Result<(Token, &[char]), String> {
         }
         '(' => Ok((Token::StartBlock(char.to_string()), &chars[1..])),
         ')' => Ok((Token::EndBlock(char.to_string()), &chars[1..])),
+        '|' => Ok((Token::UnaryBlock(char.to_string()), &chars[1..])),
         '0'..='9' => parse_number(chars),
         char => Err(format!("'{char}' is not a valid token!")),
     }
@@ -92,32 +102,40 @@ fn skip_whitespaces(chars: &[char]) -> &[char] {
 #[cfg(test)]
 mod tests {
     use super::{Token::*, *};
-    use std::str::FromStr;
 
     #[test]
     fn parse_tokens() {
-        let expr = String::from("(+-12) (%10.10) ^^/*()    12.12)");
-        let expected_expr_tokens = Ok(vec![
+        let expr = String::from("(|-12 ^ 2 * (34 + 69)| - (6 / 2)) % 2");
+        let expected_expr_tokens = vec![
             StartBlock(String::from("(")),
-            BinaryOperator(String::from("+")),
+            UnaryBlock(String::from("|")),
             BinaryOperator(String::from("-")),
             Number(Fraction::from(12)),
-            EndBlock(String::from(")")),
-            StartBlock(String::from("(")),
-            BinaryOperator(String::from("%")),
-            Number(Fraction::from_str("10.10").unwrap()),
-            EndBlock(String::from(")")),
             BinaryOperator(String::from("^")),
-            BinaryOperator(String::from("^")),
-            BinaryOperator(String::from("/")),
+            Number(Fraction::from(2)),
             BinaryOperator(String::from("*")),
             StartBlock(String::from("(")),
+            Number(Fraction::from(34)),
+            BinaryOperator(String::from("+")),
+            Number(Fraction::from(69)),
             EndBlock(String::from(")")),
-            Number(Fraction::from_str("12.12").unwrap()),
+            UnaryBlock(String::from("|")),
+            BinaryOperator(String::from("-")),
+            StartBlock(String::from("(")),
+            Number(Fraction::from(6)),
+            BinaryOperator(String::from("/")),
+            Number(Fraction::from(2)),
             EndBlock(String::from(")")),
-        ]);
-        let actual_expr_tokens = super::parse_tokens(&expr);
-        assert_eq!(actual_expr_tokens, expected_expr_tokens);
+            EndBlock(String::from(")")),
+            BinaryOperator(String::from("%")),
+            Number(Fraction::from(2)),
+        ];
+        let actual_expr_tokens = super::parse_tokens(&expr).unwrap();
+        expected_expr_tokens
+            .iter()
+            .enumerate()
+            .for_each(|(i, t)| assert_eq!(t, actual_expr_tokens.get(i).unwrap(), "at index {i}"));
+        assert_eq!(expected_expr_tokens, actual_expr_tokens, "solution has extra values!");
 
         let wrong_expr1 = String::from("(12.34.54 + 12)");
         let wrong_expr2 = String::from("(12.34'54 + 12)");
