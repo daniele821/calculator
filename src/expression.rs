@@ -135,7 +135,7 @@ mod tests {
             .iter()
             .enumerate()
             .for_each(|(i, t)| assert_eq!(t, actual_expr_tokens.get(i).unwrap(), "at index {i}"));
-        assert_eq!(expected_expr_tokens, actual_expr_tokens, "solution has extra values!");
+        assert_eq!(expected_expr_tokens, actual_expr_tokens);
 
         let wrong_expr1 = String::from("(12.34.54 + 12)");
         let wrong_expr2 = String::from("(12.34'54 + 12)");
@@ -145,31 +145,12 @@ mod tests {
 
     #[test]
     fn check_blocks() {
-        let tokens_valid_1: &[Token] = &[];
-        let tokens_valid_2: &[Token] = &[
-            Token::StartBlock(String::from("(")),
-            Token::EndBlock(String::from(")")),
-        ];
-        let tokens_valid_3: &[Token] = &[
-            Token::StartBlock(String::from("(")),
-            Token::EndBlock(String::from(")")),
-            Token::StartBlock(String::from("(")),
-            Token::EndBlock(String::from(")")),
-        ];
-        let tokens_invalid_1: &[Token] = &[
-            Token::StartBlock(String::from("(")),
-            Token::EndBlock(String::from(")")),
-            Token::EndBlock(String::from(")")),
-        ];
-        let tokens_invalid_2: &[Token] = &[
-            Token::StartBlock(String::from("(")),
-            Token::StartBlock(String::from("(")),
-            Token::EndBlock(String::from(")")),
-        ];
-        let tokens_invalid_3: &[Token] = &[
-            Token::EndBlock(String::from(")")),
-            Token::StartBlock(String::from("(")),
-        ];
+        let tokens_valid_1 = &super::parse_tokens("").unwrap();
+        let tokens_valid_2 = &super::parse_tokens("()").unwrap();
+        let tokens_valid_3 = &super::parse_tokens("()()").unwrap();
+        let tokens_invalid_1 = &super::parse_tokens("(()").unwrap();
+        let tokens_invalid_2 = &super::parse_tokens("())").unwrap();
+        let tokens_invalid_3 = &super::parse_tokens(")(").unwrap();
 
         assert!(super::check_blocks(tokens_valid_1).is_ok());
         assert!(super::check_blocks(tokens_valid_2).is_ok());
