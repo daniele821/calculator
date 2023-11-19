@@ -1,26 +1,21 @@
-#![allow(dead_code, unused)]
+// #![allow(dead_code, unused)]
 
 use fraction::Fraction;
 use std::{env, str::FromStr};
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Token {
-    Addition,
-    Subtraction,
-    Multiplication,
-    Division,
-    Module,
-    Elevation,
-    StartPriorityBlock,
-    EndPriorityBlock,
     Number(Fraction),
+    BinaryOperator(String),
+    StartBlock(String),
+    EndBlock(String),
 }
 
 pub fn run() -> Result<Fraction, String> {
     let args = collect_args();
     let tokens = parse_tokens(&args)?;
-    all_checks_on_tokens(&tokens)?;
-    todo!();
+    check_blocks(&tokens)?;
+    Err(String::from("TODO!"))
 }
 
 pub fn collect_args() -> String {
@@ -38,22 +33,37 @@ pub fn parse_tokens(expr: &str) -> Result<Vec<Token>, String> {
     Ok(res)
 }
 
-pub fn all_checks_on_tokens(tokens: &[Token]) -> Result<(), String> {
-    check_blocks(tokens)?;
-    Ok(())
+pub fn check_blocks(tokens: &[Token]) -> Result<(), String> {
+    let err_msg = String::from("blocks are not balanced");
+    let mut stack = Vec::<&Token>::new();
+    for token in tokens {
+        match token {
+            Token::StartBlock(str) => match &str[..] {
+                "(" => stack.push(token),
+                _ => Err(err_msg.clone())?,
+            },
+            Token::EndBlock(str) => match &str[..] {
+                ")" => {
+                    let expected_token = &Token::StartBlock(String::from("("));
+                    let actual_token = stack.pop().ok_or(err_msg.clone())?;
+                    (expected_token == actual_token).then_some(err_msg.clone());
+                }
+                _ => Err(err_msg.clone())?,
+            },
+            _ => Err(err_msg.clone())?,
+        };
+    }
+    stack.is_empty().then_some(()).ok_or(err_msg)
 }
 
 fn parse_token(chars: &[char]) -> Result<(Token, &[char]), String> {
     let char = chars.first().ok_or("cannot parse empty string!")?;
     match char {
-        '*' => Ok((Token::Multiplication, &chars[1..])),
-        '+' => Ok((Token::Addition, &chars[1..])),
-        '%' => Ok((Token::Module, &chars[1..])),
-        '/' => Ok((Token::Division, &chars[1..])),
-        '-' => Ok((Token::Subtraction, &chars[1..])),
-        '^' => Ok((Token::Elevation, &chars[1..])),
-        '(' => Ok((Token::StartPriorityBlock, &chars[1..])),
-        ')' => Ok((Token::EndPriorityBlock, &chars[1..])),
+        '*' | '+' | '%' | '/' | '-' | '^' => {
+            Ok((Token::BinaryOperator(char.to_string()), &chars[1..]))
+        }
+        '(' => Ok((Token::StartBlock(char.to_string()), &chars[1..])),
+        ')' => Ok((Token::EndBlock(char.to_string()), &chars[1..])),
         '0'..='9' => parse_number(chars),
         char => Err(format!("'{char}' is not a valid token!")),
     }
@@ -79,24 +89,6 @@ fn skip_whitespaces(chars: &[char]) -> &[char] {
     &[]
 }
 
-fn check_blocks(tokens: &[Token]) -> Result<(), String> {
-    let err_msg = String::from("blocks are not balanced");
-    let mut stack = Vec::<Token>::new();
-    for token in tokens {
-        match token {
-            Token::StartPriorityBlock => stack.push(Token::StartPriorityBlock),
-            Token::EndPriorityBlock => {
-                stack.pop().ok_or(err_msg.clone())?;
-            }
-            _ => (),
-        };
-    }
-    if !stack.is_empty() {
-        return Err(err_msg);
-    }
-    Ok(())
-}
-
 #[cfg(test)]
 mod tests {
     use super::{Token::*, *};
@@ -106,23 +98,23 @@ mod tests {
     fn parse_tokens() {
         let expr = String::from("(+-12) (%10.10) ^^/*()    12.12)");
         let expected_expr_tokens = Ok(vec![
-            StartPriorityBlock,
-            Addition,
-            Subtraction,
+            StartBlock(String::from("(")),
+            BinaryOperator(String::from("+")),
+            BinaryOperator(String::from("-")),
             Number(Fraction::from(12)),
-            EndPriorityBlock,
-            StartPriorityBlock,
-            Module,
+            EndBlock(String::from(")")),
+            StartBlock(String::from("(")),
+            BinaryOperator(String::from("%")),
             Number(Fraction::from_str("10.10").unwrap()),
-            EndPriorityBlock,
-            Elevation,
-            Elevation,
-            Division,
-            Multiplication,
-            StartPriorityBlock,
-            EndPriorityBlock,
+            EndBlock(String::from(")")),
+            BinaryOperator(String::from("^")),
+            BinaryOperator(String::from("^")),
+            BinaryOperator(String::from("/")),
+            BinaryOperator(String::from("*")),
+            StartBlock(String::from("(")),
+            EndBlock(String::from(")")),
             Number(Fraction::from_str("12.12").unwrap()),
-            EndPriorityBlock,
+            EndBlock(String::from(")")),
         ]);
         let actual_expr_tokens = super::parse_tokens(&expr);
         assert_eq!(actual_expr_tokens, expected_expr_tokens);
@@ -136,24 +128,30 @@ mod tests {
     #[test]
     fn check_blocks() {
         let tokens_valid_1: &[Token] = &[];
-        let tokens_valid_2: &[Token] = &[Token::StartPriorityBlock, Token::EndPriorityBlock];
+        let tokens_valid_2: &[Token] = &[
+            Token::StartBlock(String::from("(")),
+            Token::EndBlock(String::from(")")),
+        ];
         let tokens_valid_3: &[Token] = &[
-            Token::StartPriorityBlock,
-            Token::EndPriorityBlock,
-            Token::StartPriorityBlock,
-            Token::EndPriorityBlock,
+            Token::StartBlock(String::from("(")),
+            Token::EndBlock(String::from(")")),
+            Token::StartBlock(String::from("(")),
+            Token::EndBlock(String::from(")")),
         ];
         let tokens_invalid_1: &[Token] = &[
-            Token::StartPriorityBlock,
-            Token::EndPriorityBlock,
-            Token::EndPriorityBlock,
+            Token::StartBlock(String::from("(")),
+            Token::EndBlock(String::from(")")),
+            Token::EndBlock(String::from(")")),
         ];
         let tokens_invalid_2: &[Token] = &[
-            Token::StartPriorityBlock,
-            Token::StartPriorityBlock,
-            Token::EndPriorityBlock,
+            Token::StartBlock(String::from("(")),
+            Token::StartBlock(String::from("(")),
+            Token::EndBlock(String::from(")")),
         ];
-        let tokens_invalid_3: &[Token] = &[Token::EndPriorityBlock, Token::StartPriorityBlock];
+        let tokens_invalid_3: &[Token] = &[
+            Token::EndBlock(String::from(")")),
+            Token::StartBlock(String::from("(")),
+        ];
 
         assert!(super::check_blocks(tokens_valid_1).is_ok());
         assert!(super::check_blocks(tokens_valid_2).is_ok());
