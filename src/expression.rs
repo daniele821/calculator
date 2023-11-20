@@ -49,7 +49,7 @@ pub fn check_blocks(tokens: &[Token]) -> Result<(), String> {
         match token {
             Token::StartBlock(str) => match &str[..] {
                 "(" => stack.push(token),
-                _ => Err(err_msg.clone())?,
+                _ => return Err(err_msg),
             },
             Token::EndBlock(str) => match &str[..] {
                 ")" => {
@@ -57,9 +57,20 @@ pub fn check_blocks(tokens: &[Token]) -> Result<(), String> {
                     let actual_token = stack.pop().ok_or(err_msg.clone())?;
                     (expected_token == actual_token).then_some(err_msg.clone());
                 }
-                _ => Err(err_msg.clone())?,
+                _ => return Err(err_msg),
             },
-            _ => Err(err_msg.clone())?,
+            Token::UnaryBlock(str) => match &str[..] {
+                "|" => {
+                    let stack_top = stack.last();
+                    if stack_top == Some(&&Token::UnaryBlock(String::from(str))) {
+                        stack.pop();
+                    } else {
+                        stack.push(token);
+                    }
+                }
+                _ => return Err(err_msg),
+            },
+            _ => (),
         };
     }
     stack.is_empty().then_some(()).ok_or(err_msg)
@@ -145,12 +156,13 @@ mod tests {
 
     #[test]
     fn check_blocks() {
-        let tokens_valid_1 = &super::parse_tokens("").unwrap();
-        let tokens_valid_2 = &super::parse_tokens("()").unwrap();
-        let tokens_valid_3 = &super::parse_tokens("()()").unwrap();
+        let tokens_valid_1 = &super::parse_tokens("12.56").unwrap();
+        let tokens_valid_2 = &super::parse_tokens("(12 + 34)").unwrap();
+        let tokens_valid_3 = &super::parse_tokens("|(|-4| * |5|)(6)|").unwrap();
         let tokens_invalid_1 = &super::parse_tokens("(()").unwrap();
         let tokens_invalid_2 = &super::parse_tokens("())").unwrap();
         let tokens_invalid_3 = &super::parse_tokens(")(").unwrap();
+        let tokens_invalid_4 = &super::parse_tokens("(|)|()").unwrap();
 
         assert!(super::check_blocks(tokens_valid_1).is_ok());
         assert!(super::check_blocks(tokens_valid_2).is_ok());
@@ -158,5 +170,6 @@ mod tests {
         assert!(super::check_blocks(tokens_invalid_1).is_err());
         assert!(super::check_blocks(tokens_invalid_2).is_err());
         assert!(super::check_blocks(tokens_invalid_3).is_err());
+        assert!(super::check_blocks(tokens_invalid_4).is_err());
     }
 }
