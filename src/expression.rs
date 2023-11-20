@@ -6,9 +6,9 @@ use std::{env, str::FromStr};
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Token {
     Number(Fraction),
-    /// - Operator between two expressions, and returns a Number.
-    /// - Example: 12 '+' (12 '/' 56)
-    BinaryOperator(String),
+    /// - Operator between n expressions, and returns a Number.
+    /// - Example: '-' 12 '+' (12 '/' 56)
+    Operator(String),
     /// - Start of block defined by two characters.
     /// - Example: '(' expr )
     StartBlock(String),
@@ -79,9 +79,7 @@ pub fn check_blocks(tokens: &[Token]) -> Result<(), String> {
 fn parse_token(chars: &[char]) -> Result<(Token, &[char]), String> {
     let char = chars.first().ok_or("cannot parse empty string!")?;
     match char {
-        '*' | '+' | '%' | '/' | '-' | '^' => {
-            Ok((Token::BinaryOperator(char.to_string()), &chars[1..]))
-        }
+        '*' | '+' | '%' | '/' | '-' | '^' => Ok((Token::Operator(char.to_string()), &chars[1..])),
         '(' => Ok((Token::StartBlock(char.to_string()), &chars[1..])),
         ')' => Ok((Token::EndBlock(char.to_string()), &chars[1..])),
         '|' => Ok((Token::UnaryBlock(char.to_string()), &chars[1..])),
@@ -120,25 +118,25 @@ mod tests {
         let expected_expr_tokens = vec![
             StartBlock(String::from("(")),
             UnaryBlock(String::from("|")),
-            BinaryOperator(String::from("-")),
+            Operator(String::from("-")),
             Number(Fraction::from(12)),
-            BinaryOperator(String::from("^")),
+            Operator(String::from("^")),
             Number(Fraction::from(2)),
-            BinaryOperator(String::from("*")),
+            Operator(String::from("*")),
             StartBlock(String::from("(")),
             Number(Fraction::from(34)),
-            BinaryOperator(String::from("+")),
+            Operator(String::from("+")),
             Number(Fraction::from(69)),
             EndBlock(String::from(")")),
             UnaryBlock(String::from("|")),
-            BinaryOperator(String::from("-")),
+            Operator(String::from("-")),
             StartBlock(String::from("(")),
             Number(Fraction::from(6)),
-            BinaryOperator(String::from("/")),
+            Operator(String::from("/")),
             Number(Fraction::from(2)),
             EndBlock(String::from(")")),
             EndBlock(String::from(")")),
-            BinaryOperator(String::from("%")),
+            Operator(String::from("%")),
             Number(Fraction::from(2)),
         ];
         let actual_expr_tokens = super::parse_tokens(&expr).unwrap();
