@@ -1,5 +1,3 @@
-// #![allow(dead_code, unused)]
-
 use fraction::Fraction;
 use std::{env, str::FromStr};
 
@@ -108,36 +106,49 @@ fn skip_whitespaces(chars: &[char]) -> &[char] {
     &[]
 }
 
+fn token_priority(token: Token) -> Option<usize> {
+    match token {
+        Token::StartBlock(_) | Token::EndBlock(_) | Token::UnaryBlock(_) => Some(0),
+        Token::Operator(str) => match &str[..] {
+            "^" => Some(1),
+            "*" | "/" | "%" => Some(2),
+            "+" | "-" => Some(3),
+            _ => None,
+        },
+        _ => None,
+    }
+}
+
 #[cfg(test)]
 mod tests {
-    use super::{Token::*, *};
+    use super::*;
 
     #[test]
     fn parse_tokens() {
         let expr = String::from("(|-12 ^ 2 * (34 + 69)| - (6 / 2)) % 2");
         let expected_expr_tokens = vec![
-            StartBlock(String::from("(")),
-            UnaryBlock(String::from("|")),
-            Operator(String::from("-")),
-            Number(Fraction::from(12)),
-            Operator(String::from("^")),
-            Number(Fraction::from(2)),
-            Operator(String::from("*")),
-            StartBlock(String::from("(")),
-            Number(Fraction::from(34)),
-            Operator(String::from("+")),
-            Number(Fraction::from(69)),
-            EndBlock(String::from(")")),
-            UnaryBlock(String::from("|")),
-            Operator(String::from("-")),
-            StartBlock(String::from("(")),
-            Number(Fraction::from(6)),
-            Operator(String::from("/")),
-            Number(Fraction::from(2)),
-            EndBlock(String::from(")")),
-            EndBlock(String::from(")")),
-            Operator(String::from("%")),
-            Number(Fraction::from(2)),
+            Token::StartBlock(String::from("(")),
+            Token::UnaryBlock(String::from("|")),
+            Token::Operator(String::from("-")),
+            Token::Number(Fraction::from(12)),
+            Token::Operator(String::from("^")),
+            Token::Number(Fraction::from(2)),
+            Token::Operator(String::from("*")),
+            Token::StartBlock(String::from("(")),
+            Token::Number(Fraction::from(34)),
+            Token::Operator(String::from("+")),
+            Token::Number(Fraction::from(69)),
+            Token::EndBlock(String::from(")")),
+            Token::UnaryBlock(String::from("|")),
+            Token::Operator(String::from("-")),
+            Token::StartBlock(String::from("(")),
+            Token::Number(Fraction::from(6)),
+            Token::Operator(String::from("/")),
+            Token::Number(Fraction::from(2)),
+            Token::EndBlock(String::from(")")),
+            Token::EndBlock(String::from(")")),
+            Token::Operator(String::from("%")),
+            Token::Number(Fraction::from(2)),
         ];
         let actual_expr_tokens = super::parse_tokens(&expr).unwrap();
         expected_expr_tokens
