@@ -5,6 +5,7 @@ pub fn run() -> Result<Fraction, String> {
     let args = collect_args();
     let tokens = parse_tokens(&args)?;
     check_blocks(&tokens)?;
+    check_expressions(&tokens)?;
     Err(String::from("TODO!"))
 }
 
@@ -46,6 +47,41 @@ fn parse_tokens(expr: &str) -> Result<Vec<TokenValue>, String> {
     Ok(res)
 }
 
+fn parse_token(chars: &[char]) -> Result<(TokenValue, &[char]), String> {
+    let char = chars.first().ok_or("cannot parse empty string!")?;
+    let str = &char.to_string()[..];
+    match char {
+        '*' | '+' | '%' | '/' | '-' | '^' => {
+            Ok((TokenValue::from((Token::Operator, str)), &chars[1..]))
+        }
+        '(' => Ok((TokenValue::from((Token::StartBlock, str)), &chars[1..])),
+        ')' => Ok((TokenValue::from((Token::EndBlock, str)), &chars[1..])),
+        '0'..='9' => parse_number(chars),
+        char => Err(format!("{char} is not a valid token!")),
+    }
+}
+
+fn parse_number(chars: &[char]) -> Result<(TokenValue, &[char]), String> {
+    let num_str = chars
+        .iter()
+        .take_while(|c| c.is_ascii_digit() || c == &&'.')
+        .collect::<String>();
+    let num_len = num_str.chars().count();
+    let err_msg = format!("{num_str} in not a valid number!");
+    let _ = Fraction::from_str(&num_str).or(Err(err_msg))?;
+    let token = TokenValue::from((Token::Number, num_str.as_str()));
+    Ok((token, &chars[num_len..]))
+}
+
+fn skip_whitespaces(chars: &[char]) -> &[char] {
+    for i in 0..chars.len() {
+        if !chars[i].is_whitespace() {
+            return &chars[i..];
+        }
+    }
+    &[]
+}
+
 fn check_blocks(tokens: &[TokenValue]) -> Result<(), String> {
     let err_msg = String::from("blocks are not balanced");
     let mut stack = Vec::<&TokenValue>::new();
@@ -69,39 +105,35 @@ fn check_blocks(tokens: &[TokenValue]) -> Result<(), String> {
     stack.is_empty().then_some(()).ok_or(err_msg)
 }
 
-fn parse_token(chars: &[char]) -> Result<(TokenValue, &[char]), String> {
-    let char = chars.first().ok_or("cannot parse empty string!")?;
-    let str = &char.to_string()[..];
-    match char {
-        '*' | '+' | '%' | '/' | '-' | '^' => {
-            Ok((TokenValue::from((Token::Operator, str)), &chars[1..]))
-        }
-        '(' => Ok((TokenValue::from((Token::StartBlock, str)), &chars[1..])),
-        ')' => Ok((TokenValue::from((Token::EndBlock, str)), &chars[1..])),
-        '0'..='9' => parse_number(chars),
-        char => Err(format!("'{char}' is not a valid token!")),
-    }
-}
-
-fn parse_number(chars: &[char]) -> Result<(TokenValue, &[char]), String> {
-    let num_str = chars
-        .iter()
-        .take_while(|c| c.is_ascii_digit() || c == &&'.')
-        .collect::<String>();
-    let num_len = num_str.chars().count();
-    let err_msg = format!("{num_str} in not a valid number!");
-    let _ = Fraction::from_str(&num_str).or(Err(err_msg))?;
-    let token = TokenValue::from((Token::Number, num_str.as_str()));
-    Ok((token, &chars[num_len..]))
-}
-
-fn skip_whitespaces(chars: &[char]) -> &[char] {
-    for i in 0..chars.len() {
-        if !chars[i].is_whitespace() {
-            return &chars[i..];
+fn check_expressions(tokens: &[TokenValue]) -> Result<(), String> {
+    let err_msg = String::from("expression is not valid!");
+    let mut stack = Vec::<&TokenValue>::new();
+    let token_number = TokenValue::from((Token::Number, "0"));
+    for token in tokens {
+        stack.push(token);
+        if stack.len() == 3
+            && stack.get(0).unwrap().token == Token::Number
+            && stack.get(1).unwrap().token == Token::Operator
+            && stack.get(2).unwrap().token == Token::Number
+        {
+            match stack.get(1).unwrap().value.as_str() {
+                "+" | "-" | "*" | "/" | "%" | "^" => {
+                    stack.clear();
+                    stack.push(&token_number);
+                }
+                _ => (),
+            }
+        } else if stack.len() == 2
+            && stack.get(0).unwrap() == &&TokenValue::from((Token::Operator, "-"))
+            && stack.get(1).unwrap().token == Token::Number
+        {
+            stack.clear();
+            stack.push(&token_number);
         }
     }
-    &[]
+    (stack.len() == 1 && stack.get(0).unwrap().token == Token::Number)
+        .then_some(())
+        .ok_or(err_msg)
 }
 
 #[cfg(test)]
@@ -130,5 +162,15 @@ mod tests {
         let tokens_invalid = &super::parse_tokens(")()()").unwrap();
         assert!(super::check_blocks(tokens_valid).is_ok());
         assert!(super::check_blocks(tokens_invalid).is_err());
+    }
+
+    #[test]
+    fn check_expressions() {
+        let expression_valid1 = &super::parse_tokens("1 * 2 + 4").unwrap();
+        let expression_valid2 = &super::parse_tokens("-1 * 2 + 4").unwrap();
+        let expression_valid3 = &super::parse_tokens("1 + (12 * (2 + 3) + (3 + 4) + 3)").unwrap();
+        assert!(super::check_expressions(expression_valid1).is_ok());
+        assert!(super::check_expressions(expression_valid2).is_ok());
+        assert!(super::check_expressions(expression_valid3).is_ok());
     }
 }
