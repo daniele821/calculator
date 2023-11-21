@@ -66,9 +66,8 @@ fn parse_number(chars: &[char]) -> Result<(TokenValue, &[char]), String> {
         .iter()
         .take_while(|c| c.is_ascii_digit() || c == &&'.')
         .collect::<String>();
+    Fraction::from_str(&num_str).or(Err(format!("{num_str} isn't a valid number!")))?;
     let num_len = num_str.chars().count();
-    let err_msg = format!("{num_str} in not a valid number!");
-    let _ = Fraction::from_str(&num_str).or(Err(err_msg))?;
     let token = TokenValue::from((Token::Number, num_str.as_str()));
     Ok((token, &chars[num_len..]))
 }
@@ -83,30 +82,32 @@ fn skip_whitespaces(chars: &[char]) -> &[char] {
 }
 
 fn check_blocks(tokens: &[TokenValue]) -> Result<(), String> {
-    let err_msg = String::from("blocks are not balanced");
     let mut stack = Vec::<&TokenValue>::new();
     for token in tokens {
         match token.token {
             Token::StartBlock => match token.value.as_str() {
                 "(" => stack.push(token),
-                _ => return Err(err_msg),
+                str => Err(format!("{str} is not a valid start block"))?,
             },
             Token::EndBlock => match token.value.as_str() {
                 ")" => {
-                    let expected_token = &TokenValue::from((Token::StartBlock, ")"));
-                    let actual_token = stack.pop().ok_or(err_msg.clone())?;
-                    (expected_token == actual_token).then_some(err_msg.clone());
+                    let expected_token = &TokenValue::from((Token::StartBlock, "("));
+                    let actual_token = stack.pop().ok_or("closed not opened block!")?;
+                    let equals = expected_token == actual_token;
+                    equals.then_some(()).ok_or("closed wrong block!")?;
                 }
-                _ => return Err(err_msg),
+                str => Err(format!("{str} is not a valid end block"))?,
             },
             _ => (),
         };
     }
-    stack.is_empty().then_some(()).ok_or(err_msg)
+    stack
+        .is_empty()
+        .then_some(())
+        .ok_or("some blocks aren't closed".to_string())
 }
 
 fn check_expressions(tokens: &[TokenValue]) -> Result<(), String> {
-    let err_msg = String::from("expression is not valid!");
     let mut stack = Vec::<&TokenValue>::new();
     let token_number = TokenValue::from((Token::Number, "0"));
     for token in tokens {
@@ -133,7 +134,7 @@ fn check_expressions(tokens: &[TokenValue]) -> Result<(), String> {
     }
     (stack.len() == 1 && stack.get(0).unwrap().token == Token::Number)
         .then_some(())
-        .ok_or(err_msg)
+        .ok_or("expression can't be collapsed into a result!".to_string())
 }
 
 #[cfg(test)]
