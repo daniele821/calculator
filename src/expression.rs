@@ -115,7 +115,7 @@ fn token_priority(token: Token) -> Option<usize> {
             "+" | "-" => Some(3),
             _ => None,
         },
-        _ => None,
+        Token::Number(_) => Some(4),
     }
 }
 
