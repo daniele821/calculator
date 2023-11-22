@@ -4,7 +4,6 @@ use std::{env, str::FromStr};
 pub fn run() -> Result<Fraction, String> {
     let args = collect_args();
     let tokens = parse_tokens(&args)?;
-    check_blocks(&tokens)?;
     check_expressions(&tokens)?;
     Err(String::from("TODO!"))
 }
@@ -92,57 +91,86 @@ fn skip_whitespaces(chars: &[char]) -> &[char] {
     &[]
 }
 
-fn check_blocks(tokens: &[TokenValue]) -> Result<(), String> {
-    let mut stack = Vec::<&TokenValue>::new();
-    for token in tokens {
-        match token.token {
-            Token::StartBlock => match token.value.as_str() {
-                "(" => stack.push(token),
-                str => Err(format!("{str} is not a valid start block"))?,
-            },
-            Token::EndBlock => match token.value.as_str() {
-                ")" => {
-                    let expected_token = &TokenValue::from((Token::StartBlock, "("));
-                    let actual_token = stack.pop().ok_or("closed not opened block!")?;
-                    let equals = expected_token == actual_token;
-                    equals.then_some(()).ok_or("closed wrong block!")?;
-                }
-                str => Err(format!("{str} is not a valid end block"))?,
-            },
-            _ => (),
-        };
-    }
-    stack
-        .is_empty()
-        .then_some(())
-        .ok_or("some blocks aren't closed".to_string())
-}
-
 fn check_expressions(tokens: &[TokenValue]) -> Result<(), String> {
-    let mut stack = Vec::<&TokenValue>::new();
-    let token_number = TokenValue::from((Token::Number, "0"));
+    let mut expr_stack = Vec::<&Token>::new();
+    let mut block_stack = Vec::<TokenValue>::new();
     for token in tokens {
-        stack.push(token);
-        let binary_operation = stack.len() == 3
-            && stack.get(0).unwrap().token == Token::Number
-            && stack.get(1).unwrap().token == Token::BinaryOperator
-            && stack.get(2).unwrap().token == Token::Number;
-        let unary_operation = stack.len() == 2
-            && stack.get(0).unwrap().token == Token::UnaryOperator
-            && stack.get(1).unwrap().token == Token::Number;
-        let binary_and_unary_operation = stack.len() == 4
-            && stack.get(0).unwrap().token == Token::Number
-            && stack.get(1).unwrap().token == Token::BinaryOperator
-            && stack.get(2).unwrap().token == Token::UnaryOperator
-            && stack.get(3).unwrap().token == Token::Number;
-        if binary_operation || unary_operation || binary_and_unary_operation {
-            stack.clear();
-            stack.push(&token_number);
-        }
+        expr_stack.push(&token.token);
+        while simplify_expression(&mut expr_stack) {}
+        check_block(&mut block_stack, token)?;
     }
-    (stack.len() == 1 && stack.get(0).unwrap().token == Token::Number)
+    (expr_stack.len() == 1 && expr_stack.get(0).unwrap() == &&Token::Number)
         .then_some(())
         .ok_or("expression can't be collapsed into a result!".to_string())
+}
+
+fn simplify_expression(stack: &mut Vec<&Token>) -> bool {
+    let len = stack.len();
+    if len >= 3
+        && stack.get(len - 3) == Some(&&Token::Number)
+        && stack.get(len - 2) == Some(&&Token::BinaryOperator)
+        && stack.get(len - 1) == Some(&&Token::Number)
+    {
+        stack.remove(len - 1);
+        stack.remove(len - 2);
+        return true;
+    }
+    if len == 2
+        && stack.get(len - 2) == Some(&&Token::UnaryOperator)
+        && stack.get(len - 1) == Some(&&Token::Number)
+    {
+        stack.remove(len - 2);
+        return true;
+    }
+    if len >= 3
+        && stack.get(len - 3) == Some(&&Token::StartBlock)
+        && stack.get(len - 2) == Some(&&Token::UnaryOperator)
+        && stack.get(len - 1) == Some(&&Token::Number)
+    {
+        stack.remove(len - 2);
+        return true;
+    }
+    if len >= 4
+        && stack.get(len - 4) == Some(&&Token::Number)
+        && stack.get(len - 3) == Some(&&Token::BinaryOperator)
+        && stack.get(len - 2) == Some(&&Token::UnaryOperator)
+        && stack.get(len - 1) == Some(&&Token::Number)
+    {
+        stack.remove(len - 1);
+        stack.remove(len - 2);
+        stack.remove(len - 3);
+        return true;
+    }
+    if len >= 3
+        && stack.get(len - 3) == Some(&&Token::StartBlock)
+        && stack.get(len - 2) == Some(&&Token::Number)
+        && stack.get(len - 1) == Some(&&Token::EndBlock)
+    {
+        stack.remove(len - 1);
+        stack.remove(len - 3);
+        return true;
+    }
+    false
+}
+
+fn check_block(stack: &mut Vec<TokenValue>, token: &TokenValue) -> Result<(), String> {
+    match token.token {
+        Token::StartBlock => match token.value.as_str() {
+            "(" => stack.push(token.clone()),
+            str => Err(format!("{str} is not a valid start block"))?,
+        },
+        Token::EndBlock => match token.value.as_str() {
+            ")" => {
+                let expected_token = &TokenValue::from((Token::StartBlock, "("));
+                let actual_token = &stack.pop().ok_or("closed not opened block!")?;
+                let equals = expected_token == actual_token;
+                equals.then_some(()).ok_or("closed wrong block!")?;
+            }
+            str => Err(format!("{str} is not a valid end block"))?,
+        },
+        _ => (),
+    };
+    Ok(())
 }
 
 #[cfg(test)]
@@ -167,22 +195,16 @@ mod tests {
     }
 
     #[test]
-    fn check_blocks() {
-        let tokens_valid = &super::parse_tokens("(()())").unwrap();
-        let tokens_invalid = &super::parse_tokens(")()()").unwrap();
-        assert!(super::check_blocks(tokens_valid).is_ok());
-        assert!(super::check_blocks(tokens_invalid).is_err());
-    }
-
-    #[test]
     fn check_expressions() {
         let expression_valid1 = &super::parse_tokens("1 * 2 + 4").unwrap();
         let expression_valid2 = &super::parse_tokens("-1 * 2 + -4").unwrap();
         let expression_valid3 = &super::parse_tokens("1 + (12 * (2 + 3) + (3 + 4) + 3)").unwrap();
         let expression_invalid1 = &super::parse_tokens("-1 * 2 + --4").unwrap();
+        let expression_invalid2 = &super::parse_tokens("( ) * )").unwrap();
         assert!(super::check_expressions(expression_valid1).is_ok());
         assert!(super::check_expressions(expression_valid2).is_ok());
         assert!(super::check_expressions(expression_valid3).is_ok());
         assert!(super::check_expressions(expression_invalid1).is_err());
+        assert!(super::check_expressions(expression_invalid2).is_err());
     }
 }
