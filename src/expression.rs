@@ -1,15 +1,40 @@
 use fraction::Fraction;
 use std::{env, str::FromStr};
 
-pub fn run() -> Result<Fraction, String> {
+pub fn run() -> Result<Fraction, Err> {
     let args = collect_args();
     let tokens = parse_tokens(&args)?;
     check_expressions(&tokens)?;
-    Err(String::from("TODO!"))
+    todo!();
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
-enum Token {
+pub enum Err {
+    Parsing(ParseErr),
+    Expression(ExprErr),
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum ParseErr {
+    InvalidToken(String),
+    InvalidNumber(String),
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum ExprErr {
+    NoResult,
+    InvalidToken(TokenValue),
+    UnbalancedBlocks,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct TokenValue {
+    token: Token,
+    value: String,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum Token {
     Number,
     UnaryOperator,
     BinaryOperator,
@@ -17,10 +42,16 @@ enum Token {
     EndBlock,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
-struct TokenValue {
-    token: Token,
-    value: String,
+impl From<ParseErr> for Err {
+    fn from(value: ParseErr) -> Self {
+        Self::Parsing(value)
+    }
+}
+
+impl From<ExprErr> for Err {
+    fn from(value: ExprErr) -> Self {
+        Self::Expression(value)
+    }
 }
 
 impl From<(Token, &str)> for TokenValue {
@@ -36,7 +67,7 @@ fn collect_args() -> String {
     env::args().skip(1).map(|i| i + " ").collect::<String>()
 }
 
-fn parse_tokens(expr: &str) -> Result<Vec<TokenValue>, String> {
+fn parse_tokens(expr: &str) -> Result<Vec<TokenValue>, Err> {
     let mut res = Vec::new();
     let mut chars_slice = &(expr.chars().collect::<Vec<char>>())[..];
     while !chars_slice.is_empty() {
@@ -50,33 +81,34 @@ fn parse_tokens(expr: &str) -> Result<Vec<TokenValue>, String> {
 fn parse_token<'a>(
     chars: &'a [char],
     prev: &[TokenValue],
-) -> Result<(TokenValue, &'a [char]), String> {
-    let char = chars.first().ok_or("cannot parse empty string!")?;
+) -> Result<(TokenValue, &'a [char]), Err> {
+    let char = chars.first().expect("cannot parse an empty string!");
     let str = &char.to_string()[..];
     let last = prev.last();
-    match char {
-        '*' | '+' | '%' | '/' | '^' => {
-            Ok((TokenValue::from((Token::BinaryOperator, str)), &chars[1..]))
-        }
+    Ok(match char {
         '-' => match last.map(|t| &t.token) {
-            Some(Token::Number) | Some(Token::EndBlock) => {
-                Ok((TokenValue::from((Token::BinaryOperator, str)), &chars[1..]))
-            }
-            _ => Ok((TokenValue::from((Token::UnaryOperator, str)), &chars[1..])),
+            Some(Token::Number) => (TokenValue::from((Token::BinaryOperator, str)), &chars[1..]),
+            Some(Token::EndBlock) => (TokenValue::from((Token::BinaryOperator, str)), &chars[1..]),
+            _ => (TokenValue::from((Token::UnaryOperator, str)), &chars[1..]),
         },
-        '(' => Ok((TokenValue::from((Token::StartBlock, str)), &chars[1..])),
-        ')' => Ok((TokenValue::from((Token::EndBlock, str)), &chars[1..])),
-        '0'..='9' => parse_number(chars),
-        char => Err(format!("{char} is not a valid token!")),
-    }
+        '+' => (TokenValue::from((Token::BinaryOperator, str)), &chars[1..]),
+        '*' => (TokenValue::from((Token::BinaryOperator, str)), &chars[1..]),
+        '/' => (TokenValue::from((Token::BinaryOperator, str)), &chars[1..]),
+        '%' => (TokenValue::from((Token::BinaryOperator, str)), &chars[1..]),
+        '^' => (TokenValue::from((Token::BinaryOperator, str)), &chars[1..]),
+        '(' => (TokenValue::from((Token::StartBlock, str)), &chars[1..]),
+        ')' => (TokenValue::from((Token::EndBlock, str)), &chars[1..]),
+        '0'..='9' => parse_number(chars)?,
+        _ => Err(ParseErr::InvalidToken(str.to_string()))?,
+    })
 }
 
-fn parse_number(chars: &[char]) -> Result<(TokenValue, &[char]), String> {
+fn parse_number(chars: &[char]) -> Result<(TokenValue, &[char]), Err> {
     let num_str = chars
         .iter()
         .take_while(|c| c.is_ascii_digit() || c == &&'.')
         .collect::<String>();
-    Fraction::from_str(&num_str).or(Err(format!("{num_str} isn't a valid number!")))?;
+    Fraction::from_str(&num_str).or(Err(ParseErr::InvalidNumber(num_str.clone())))?;
     let num_len = num_str.chars().count();
     let token = TokenValue::from((Token::Number, num_str.as_str()));
     Ok((token, &chars[num_len..]))
@@ -91,7 +123,7 @@ fn skip_whitespaces(chars: &[char]) -> &[char] {
     &[]
 }
 
-fn check_expressions(tokens: &[TokenValue]) -> Result<(), String> {
+fn check_expressions(tokens: &[TokenValue]) -> Result<(), Err> {
     let mut expr_stack = Vec::<&Token>::new();
     let mut block_stack = Vec::<TokenValue>::new();
     for token in tokens {
@@ -99,9 +131,9 @@ fn check_expressions(tokens: &[TokenValue]) -> Result<(), String> {
         while simplify_expression(&mut expr_stack) {}
         check_block(&mut block_stack, token)?;
     }
-    (expr_stack.len() == 1 && expr_stack.get(0).unwrap() == &&Token::Number)
+    (expr_stack.len() == 1 && expr_stack.get(0) == Some(&&Token::Number))
         .then_some(())
-        .ok_or("expression can't be collapsed into a result!".to_string())
+        .ok_or(Err::Expression(ExprErr::NoResult))
 }
 
 fn simplify_expression(stack: &mut Vec<&Token>) -> bool {
@@ -153,20 +185,20 @@ fn simplify_expression(stack: &mut Vec<&Token>) -> bool {
     false
 }
 
-fn check_block(stack: &mut Vec<TokenValue>, token: &TokenValue) -> Result<(), String> {
+fn check_block(stack: &mut Vec<TokenValue>, token: &TokenValue) -> Result<(), Err> {
     match token.token {
         Token::StartBlock => match token.value.as_str() {
             "(" => stack.push(token.clone()),
-            str => Err(format!("{str} is not a valid start block"))?,
+            _ => Err(ExprErr::InvalidToken(token.clone()))?,
         },
         Token::EndBlock => match token.value.as_str() {
             ")" => {
                 let expected_token = &TokenValue::from((Token::StartBlock, "("));
-                let actual_token = &stack.pop().ok_or("closed not opened block!")?;
+                let actual_token = &stack.pop().ok_or(ExprErr::UnbalancedBlocks)?;
                 let equals = expected_token == actual_token;
-                equals.then_some(()).ok_or("closed wrong block!")?;
+                equals.then_some(()).ok_or(ExprErr::UnbalancedBlocks)?;
             }
-            str => Err(format!("{str} is not a valid end block"))?,
+            _ => Err(ExprErr::InvalidToken(token.clone()))?,
         },
         _ => (),
     };
