@@ -69,7 +69,8 @@ fn collect_args() -> String {
 
 fn parse_tokens(expr: &str) -> Result<Vec<TokenValue>, Err> {
     let mut res = Vec::new();
-    let mut chars_slice = &(expr.chars().collect::<Vec<char>>())[..];
+    let chars_slice = &(expr.chars().collect::<Vec<char>>())[..];
+    let mut chars_slice = skip_whitespaces(chars_slice);
     while !chars_slice.is_empty() {
         let (token, char_slice_tmp) = parse_token(chars_slice, &res)?;
         chars_slice = skip_whitespaces(char_slice_tmp);
