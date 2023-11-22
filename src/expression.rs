@@ -123,22 +123,19 @@ fn check_expressions(tokens: &[TokenValue]) -> Result<(), String> {
     let token_number = TokenValue::from((Token::Number, "0"));
     for token in tokens {
         stack.push(token);
-        if stack.len() == 3
+        let binary_operation = stack.len() == 3
             && stack.get(0).unwrap().token == Token::Number
             && stack.get(1).unwrap().token == Token::BinaryOperator
-            && stack.get(2).unwrap().token == Token::Number
-        {
-            match stack.get(1).unwrap().value.as_str() {
-                "+" | "-" | "*" | "/" | "%" | "^" => {
-                    stack.clear();
-                    stack.push(&token_number);
-                }
-                _ => (),
-            }
-        } else if stack.len() == 2
+            && stack.get(2).unwrap().token == Token::Number;
+        let unary_operation = stack.len() == 2
             && stack.get(0).unwrap().token == Token::UnaryOperator
-            && stack.get(1).unwrap().token == Token::Number
-        {
+            && stack.get(1).unwrap().token == Token::Number;
+        let binary_and_unary_operation = stack.len() == 4
+            && stack.get(0).unwrap().token == Token::Number
+            && stack.get(1).unwrap().token == Token::BinaryOperator
+            && stack.get(2).unwrap().token == Token::UnaryOperator
+            && stack.get(3).unwrap().token == Token::Number;
+        if binary_operation || unary_operation || binary_and_unary_operation {
             stack.clear();
             stack.push(&token_number);
         }
@@ -180,10 +177,12 @@ mod tests {
     #[test]
     fn check_expressions() {
         let expression_valid1 = &super::parse_tokens("1 * 2 + 4").unwrap();
-        let expression_valid2 = &super::parse_tokens("-1 * 2 + 4").unwrap();
+        let expression_valid2 = &super::parse_tokens("-1 * 2 + -4").unwrap();
         let expression_valid3 = &super::parse_tokens("1 + (12 * (2 + 3) + (3 + 4) + 3)").unwrap();
+        let expression_invalid1 = &super::parse_tokens("-1 * 2 + --4").unwrap();
         assert!(super::check_expressions(expression_valid1).is_ok());
         assert!(super::check_expressions(expression_valid2).is_ok());
         assert!(super::check_expressions(expression_valid3).is_ok());
+        assert!(super::check_expressions(expression_invalid1).is_err());
     }
 }
