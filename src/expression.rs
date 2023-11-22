@@ -12,7 +12,8 @@ pub fn run() -> Result<Fraction, String> {
 #[derive(Debug, Clone, PartialEq, Eq)]
 enum Token {
     Number,
-    Operator,
+    UnaryOperator,
+    BinaryOperator,
     StartBlock,
     EndBlock,
 }
@@ -40,20 +41,30 @@ fn parse_tokens(expr: &str) -> Result<Vec<TokenValue>, String> {
     let mut res = Vec::new();
     let mut chars_slice = &(expr.chars().collect::<Vec<char>>())[..];
     while !chars_slice.is_empty() {
-        let (token, char_slice_tmp) = parse_token(chars_slice)?;
+        let (token, char_slice_tmp) = parse_token(chars_slice, &res)?;
         chars_slice = skip_whitespaces(char_slice_tmp);
         res.push(token);
     }
     Ok(res)
 }
 
-fn parse_token(chars: &[char]) -> Result<(TokenValue, &[char]), String> {
+fn parse_token<'a>(
+    chars: &'a [char],
+    prev: &[TokenValue],
+) -> Result<(TokenValue, &'a [char]), String> {
     let char = chars.first().ok_or("cannot parse empty string!")?;
     let str = &char.to_string()[..];
+    let last = prev.last();
     match char {
-        '*' | '+' | '%' | '/' | '-' | '^' => {
-            Ok((TokenValue::from((Token::Operator, str)), &chars[1..]))
+        '*' | '+' | '%' | '/' | '^' => {
+            Ok((TokenValue::from((Token::BinaryOperator, str)), &chars[1..]))
         }
+        '-' => match last.map(|t| &t.token) {
+            Some(Token::Number) | Some(Token::EndBlock) => {
+                Ok((TokenValue::from((Token::BinaryOperator, str)), &chars[1..]))
+            }
+            _ => Ok((TokenValue::from((Token::UnaryOperator, str)), &chars[1..])),
+        },
         '(' => Ok((TokenValue::from((Token::StartBlock, str)), &chars[1..])),
         ')' => Ok((TokenValue::from((Token::EndBlock, str)), &chars[1..])),
         '0'..='9' => parse_number(chars),
@@ -114,7 +125,7 @@ fn check_expressions(tokens: &[TokenValue]) -> Result<(), String> {
         stack.push(token);
         if stack.len() == 3
             && stack.get(0).unwrap().token == Token::Number
-            && stack.get(1).unwrap().token == Token::Operator
+            && stack.get(1).unwrap().token == Token::BinaryOperator
             && stack.get(2).unwrap().token == Token::Number
         {
             match stack.get(1).unwrap().value.as_str() {
@@ -125,7 +136,7 @@ fn check_expressions(tokens: &[TokenValue]) -> Result<(), String> {
                 _ => (),
             }
         } else if stack.len() == 2
-            && stack.get(0).unwrap() == &&TokenValue::from((Token::Operator, "-"))
+            && stack.get(0).unwrap().token == Token::UnaryOperator
             && stack.get(1).unwrap().token == Token::Number
         {
             stack.clear();
@@ -143,13 +154,14 @@ mod tests {
 
     #[test]
     fn parse_tokens() {
-        let expr = "12*3-(7)";
+        let expr = "12*3-(-7)";
         let expected_expr_tokens = vec![
             TokenValue::from((Token::Number, "12")),
-            TokenValue::from((Token::Operator, "*")),
+            TokenValue::from((Token::BinaryOperator, "*")),
             TokenValue::from((Token::Number, "3")),
-            TokenValue::from((Token::Operator, "-")),
+            TokenValue::from((Token::BinaryOperator, "-")),
             TokenValue::from((Token::StartBlock, "(")),
+            TokenValue::from((Token::UnaryOperator, "-")),
             TokenValue::from((Token::Number, "7")),
             TokenValue::from((Token::EndBlock, ")")),
         ];
