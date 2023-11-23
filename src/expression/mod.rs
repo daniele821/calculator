@@ -1,6 +1,8 @@
 use fraction::Fraction;
 use std::{env, str::FromStr};
 
+pub mod tree;
+
 pub fn run() -> Result<Fraction, Err> {
     let args = collect_args();
     let tokens = parse_tokens(&args)?;
