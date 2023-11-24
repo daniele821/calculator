@@ -58,8 +58,14 @@ impl AST {
         self.right = None;
     }
 
+    pub fn has_left(&self) -> bool {
+        self.left.is_some()
+    }
+    pub fn has_right(&self) -> bool {
+        self.right.is_some()
+    }
     pub fn is_leaf(&self) -> bool {
-        self.left.is_none() && self.right().is_none()
+        !self.has_left() && !self.has_right()
     }
 }
 

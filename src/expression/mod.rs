@@ -65,6 +65,21 @@ impl From<(Token, &str)> for TokenValue {
     }
 }
 
+impl TokenValue {
+    pub fn token(&self) -> &Token {
+        &self.token
+    }
+    pub fn value(&self) -> &String {
+        &self.value
+    }
+    pub fn token_mut(&mut self) -> &mut Token {
+        &mut self.token
+    }
+    pub fn value_mut(&mut self) -> &mut String {
+        &mut self.value
+    }
+}
+
 fn collect_args() -> String {
     env::args().skip(1).map(|i| i + " ").collect::<String>()
 }
