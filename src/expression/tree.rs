@@ -3,7 +3,7 @@
 use super::{Token, TokenValue};
 use std::fmt;
 
-#[derive(Debug)]
+#[derive(Debug, Eq, PartialEq)]
 pub struct AST {
     value: TokenValue,
     left: Option<Box<AST>>,
@@ -22,6 +22,15 @@ impl From<TokenValue> for AST {
 impl From<(Token, &str)> for AST {
     fn from(value: (Token, &str)) -> Self {
         Self::from(TokenValue::from(value))
+    }
+}
+
+impl From<(TokenValue, AST, AST)> for AST {
+    fn from(value: (TokenValue, AST, AST)) -> Self {
+        let mut res = Self::from(value.0);
+        res.add_left(value.1);
+        res.add_left(value.2);
+        res
     }
 }
 
