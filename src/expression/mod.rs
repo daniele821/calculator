@@ -20,6 +20,7 @@ pub enum Err {
 pub enum ParseErr {
     InvalidToken(String),
     InvalidNumber(String),
+    IllegalState,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -27,6 +28,7 @@ pub enum ExprErr {
     NoResult,
     InvalidToken(TokenValue),
     UnbalancedBlocks,
+    IllegalState,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -100,7 +102,7 @@ fn parse_token<'a>(
     chars: &'a [char],
     prev: &[TokenValue],
 ) -> Result<(TokenValue, &'a [char]), Err> {
-    let char = chars.first().expect("cannot parse an empty string!");
+    let char = chars.first().ok_or(ParseErr::IllegalState)?;
     let str = &char.to_string()[..];
     let last = prev.last();
     Ok(match char {
