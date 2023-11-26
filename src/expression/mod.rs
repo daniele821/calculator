@@ -148,7 +148,7 @@ fn check_expressions(tokens: &[TokenValue]) -> Result<(), Err> {
     let mut block_stack = Vec::<TokenValue>::new();
     for token in tokens {
         expr_stack.push(&token.token);
-        while simplify_expression(&mut expr_stack) {}
+        while collapse_expression(&mut expr_stack) {}
         check_block(&mut block_stack, token)?;
     }
     (expr_stack.len() == 1 && expr_stack.get(0) == Some(&&Token::Number))
@@ -156,7 +156,7 @@ fn check_expressions(tokens: &[TokenValue]) -> Result<(), Err> {
         .ok_or(Err::Expression(ExprErr::NoResult))
 }
 
-fn simplify_expression(stack: &mut Vec<&Token>) -> bool {
+fn collapse_expression(stack: &mut Vec<&Token>) -> bool {
     let len = stack.len();
     if len >= 3
         && stack.get(len - 3) == Some(&&Token::Number)
