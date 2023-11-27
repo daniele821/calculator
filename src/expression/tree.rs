@@ -41,7 +41,6 @@ impl AST {
     pub fn change_value(&mut self, value: TokenValue) {
         self.value = value
     }
-
     pub fn left(&self) -> Option<&AST> {
         self.left.as_deref()
     }
@@ -66,7 +65,6 @@ impl AST {
     pub fn remove_right(&mut self) {
         self.right = None;
     }
-
     pub fn has_left(&self) -> bool {
         self.left.is_some()
     }
@@ -75,11 +73,5 @@ impl AST {
     }
     pub fn is_leaf(&self) -> bool {
         !self.has_left() && !self.has_right()
-    }
-}
-
-impl fmt::Display for AST {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        todo!();
     }
 }

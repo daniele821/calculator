@@ -1,19 +1,23 @@
 use fraction::Fraction;
 use std::{env, str::FromStr};
 
+use self::tree::AST;
+
 pub mod tree;
 
 pub fn run() -> Result<Fraction, Err> {
     let args = collect_args();
     let tokens = parse_tokens(&args)?;
     check_expressions(&tokens)?;
-    todo!();
+    let ast = build_ast(&tokens)?;
+    solve_ast(ast)
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Err {
     Parsing(ParseErr),
     Expression(ExprErr),
+    AST(AstErr),
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -30,6 +34,9 @@ pub enum ExprErr {
     UnbalancedBlocks,
     IllegalState,
 }
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum AstErr {}
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct TokenValue {
@@ -225,12 +232,20 @@ fn check_block(stack: &mut Vec<TokenValue>, token: &TokenValue) -> Result<(), Er
     Ok(())
 }
 
+fn build_ast(tokens: &[TokenValue]) -> Result<AST, Err> {
+    todo!();
+}
+
+fn solve_ast(ast: AST) -> Result<Fraction, Err> {
+    todo!();
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
 
     #[test]
-    fn parse_tokens() {
+    fn test_parse_tokens() {
         let expr = "12*3-(-7)";
         let expected_expr_tokens = vec![
             TokenValue::from((Token::Number, "12")),
@@ -242,21 +257,31 @@ mod tests {
             TokenValue::from((Token::Number, "7")),
             TokenValue::from((Token::EndBlock, ")")),
         ];
-        let actual_expr_tokens = super::parse_tokens(expr).unwrap();
+        let actual_expr_tokens = parse_tokens(expr).unwrap();
         assert_eq!(expected_expr_tokens, actual_expr_tokens);
     }
 
     #[test]
-    fn check_expressions() {
-        let expression_valid1 = &super::parse_tokens("1 * 2 + 4").unwrap();
-        let expression_valid2 = &super::parse_tokens("-1 * 2 + -4").unwrap();
-        let expression_valid3 = &super::parse_tokens("1 + (12 * (2 + 3) + (3 + 4) + 3)").unwrap();
-        let expression_invalid1 = &super::parse_tokens("-1 * 2 + --4").unwrap();
-        let expression_invalid2 = &super::parse_tokens("( ) * )").unwrap();
-        assert!(super::check_expressions(expression_valid1).is_ok());
-        assert!(super::check_expressions(expression_valid2).is_ok());
-        assert!(super::check_expressions(expression_valid3).is_ok());
-        assert!(super::check_expressions(expression_invalid1).is_err());
-        assert!(super::check_expressions(expression_invalid2).is_err());
+    fn test_check_expressions() {
+        let expression_valid1 = &parse_tokens("1 * 2 + 4").unwrap();
+        let expression_valid2 = &parse_tokens("-1 * 2 + -4").unwrap();
+        let expression_valid3 = &parse_tokens("1 + (12 * (2 + 3) + (3 + 4) + 3)").unwrap();
+        let expression_invalid1 = &parse_tokens("-1 * 2 + --4").unwrap();
+        let expression_invalid2 = &parse_tokens("( ) * )").unwrap();
+        assert!(check_expressions(expression_valid1).is_ok());
+        assert!(check_expressions(expression_valid2).is_ok());
+        assert!(check_expressions(expression_valid3).is_ok());
+        assert!(check_expressions(expression_invalid1).is_err());
+        assert!(check_expressions(expression_invalid2).is_err());
+    }
+
+    #[test]
+    fn test_build_ast() {
+        todo!();
+    }
+
+    #[test]
+    fn test_solve_ast() {
+        todo!();
     }
 }
