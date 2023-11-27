@@ -1,16 +1,11 @@
 use fraction::Fraction;
 use std::{env, str::FromStr};
 
-use self::tree::AST;
-
-pub mod tree;
-
 pub fn run() -> Result<Fraction, Err> {
     let args = collect_args();
     let tokens = parse_tokens(&args)?;
     check_expressions(&tokens)?;
-    let ast = build_ast(&tokens)?;
-    solve_ast(ast)
+    todo!();
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -232,14 +227,6 @@ fn check_block(stack: &mut Vec<TokenValue>, token: &TokenValue) -> Result<(), Er
     Ok(())
 }
 
-fn build_ast(tokens: &[TokenValue]) -> Result<AST, Err> {
-    todo!();
-}
-
-fn solve_ast(ast: AST) -> Result<Fraction, Err> {
-    todo!();
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -273,15 +260,5 @@ mod tests {
         assert!(check_expressions(expression_valid3).is_ok());
         assert!(check_expressions(expression_invalid1).is_err());
         assert!(check_expressions(expression_invalid2).is_err());
-    }
-
-    #[test]
-    fn test_build_ast() {
-        todo!();
-    }
-
-    #[test]
-    fn test_solve_ast() {
-        todo!();
     }
 }
