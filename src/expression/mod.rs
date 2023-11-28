@@ -1,15 +1,7 @@
 use fraction::Fraction;
 use std::{env, str::FromStr};
 
-pub fn run() -> Result<Fraction, Err> {
-    run_args(&collect_args())
-}
-
-pub fn run_args(expr: &str) -> Result<Fraction, Err> {
-    let tokens = parse_tokens(expr)?;
-    check_expressions(&tokens)?;
-    solve_expr(tokens)
-}
+// ---------- PUBLIC ITEMS ----------
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Err {
@@ -20,19 +12,36 @@ pub enum Err {
     UnbalancedBlocks,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct TokenValue {
-    token: Token,
-    value: String,
+pub fn run() -> Result<Fraction, Err> {
+    run_args(&collect_args())
 }
 
+pub fn run_args(expr: &str) -> Result<Fraction, Err> {
+    let tokens = parse_tokens(expr)?;
+    check_expressions(&tokens)?;
+    solve_expr(tokens)
+}
+
+// ---------- PRIVATE ITEMS ----------
+
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub enum Token {
+enum Token {
     Number,
     UnaryOperator,
     BinaryOperator,
     StartBlock,
     EndBlock,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+struct TokenValue {
+    token: Token,
+    value: String,
+}
+#[derive(Debug, Clone, PartialEq, Eq)]
+struct TokenNum {
+    token: TokenValue,
+    num: Option<Fraction>,
 }
 
 impl From<(Token, &str)> for TokenValue {
@@ -44,18 +53,15 @@ impl From<(Token, &str)> for TokenValue {
     }
 }
 
-impl TokenValue {
-    pub fn token(&self) -> &Token {
-        &self.token
-    }
-    pub fn value(&self) -> &String {
-        &self.value
-    }
-    pub fn token_mut(&mut self) -> &mut Token {
-        &mut self.token
-    }
-    pub fn value_mut(&mut self) -> &mut String {
-        &mut self.value
+impl TokenNum {
+    fn from_token(token: TokenValue) -> Result<Self, Err> {
+        let num: Option<Fraction> = if token.token == Token::Number {
+            let err = Err(Err::InvalidNumber(token.value.clone()));
+            Some(Fraction::from_str(&token.value).or(err)?)
+        } else {
+            None
+        };
+        Ok(Self { token, num })
     }
 }
 
@@ -184,7 +190,7 @@ fn check_block(stack: &mut Vec<TokenValue>, token: &TokenValue) -> Result<(), Er
         Token::StartBlock => match token.value.as_str() {
             "(" => stack.push(token.clone()),
             // _ => Err::InvalidToken(token.value().clone())?,
-            _ => Err(Err::InvalidToken(token.value().clone()))?,
+            _ => Err(Err::InvalidToken(token.value.clone()))?,
         },
         Token::EndBlock => match token.value.as_str() {
             ")" => {
@@ -193,7 +199,7 @@ fn check_block(stack: &mut Vec<TokenValue>, token: &TokenValue) -> Result<(), Er
                 let equals = expected_token == actual_token;
                 equals.then_some(()).ok_or(Err::UnbalancedBlocks)?;
             }
-            _ => Err(Err::InvalidToken(token.value().clone()))?,
+            _ => Err(Err::InvalidToken(token.value.clone()))?,
         },
         _ => (),
     };
