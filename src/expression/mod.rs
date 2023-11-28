@@ -54,7 +54,8 @@ impl From<(Token, &str)> for TokenValue {
 }
 
 impl TokenNum {
-    fn from_token(token: TokenValue) -> Result<Self, Err> {
+    fn from_token(token: &TokenValue) -> Result<Self, Err> {
+        let token = token.clone();
         let num: Option<Fraction> = if token.token == Token::Number {
             let err = Err(Err::InvalidNumber(token.value.clone()));
             Some(Fraction::from_str(&token.value).or(err)?)
@@ -206,8 +207,17 @@ fn check_block(stack: &mut Vec<TokenValue>, token: &TokenValue) -> Result<(), Er
     Ok(())
 }
 
-fn solve_expr(mut tokens: Vec<TokenValue>) -> Result<Fraction, Err> {
+fn solve_expr(tokens: Vec<TokenValue>) -> Result<Fraction, Err> {
+    let mut tokens = convert_token(tokens)?;
     todo!()
+}
+
+fn convert_token(tokens: Vec<TokenValue>) -> Result<Vec<TokenNum>, Err> {
+    let mut buffer = Vec::<TokenNum>::with_capacity(tokens.len());
+    for i in tokens {
+        buffer.push(TokenNum::from_token(&i)?);
+    }
+    Ok(buffer)
 }
 
 #[cfg(test)]
