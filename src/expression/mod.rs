@@ -10,28 +10,12 @@ pub fn run() -> Result<Fraction, Err> {
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Err {
-    Parsing(ParseErr),
-    Expression(ExprErr),
-    AST(AstErr),
-}
-
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub enum ParseErr {
+    IllegalState,
     InvalidToken(String),
     InvalidNumber(String),
-    IllegalState,
-}
-
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub enum ExprErr {
     NoResult,
-    InvalidToken(TokenValue),
     UnbalancedBlocks,
-    IllegalState,
 }
-
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub enum AstErr {}
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct TokenValue {
@@ -46,18 +30,6 @@ pub enum Token {
     BinaryOperator,
     StartBlock,
     EndBlock,
-}
-
-impl From<ParseErr> for Err {
-    fn from(value: ParseErr) -> Self {
-        Self::Parsing(value)
-    }
-}
-
-impl From<ExprErr> for Err {
-    fn from(value: ExprErr) -> Self {
-        Self::Expression(value)
-    }
 }
 
 impl From<(Token, &str)> for TokenValue {
@@ -104,7 +76,7 @@ fn parse_token<'a>(
     chars: &'a [char],
     prev: &[TokenValue],
 ) -> Result<(TokenValue, &'a [char]), Err> {
-    let char = chars.first().ok_or(ParseErr::IllegalState)?;
+    let char = chars.first().ok_or(Err::IllegalState)?;
     let str = &char.to_string()[..];
     let last = prev.last();
     Ok(match char {
@@ -121,7 +93,7 @@ fn parse_token<'a>(
         '(' => (TokenValue::from((Token::StartBlock, str)), &chars[1..]),
         ')' => (TokenValue::from((Token::EndBlock, str)), &chars[1..]),
         '0'..='9' => parse_number(chars)?,
-        _ => Err(ParseErr::InvalidToken(str.to_string()))?,
+        _ => Err(Err::InvalidToken(str.to_string()))?,
     })
 }
 
@@ -130,7 +102,7 @@ fn parse_number(chars: &[char]) -> Result<(TokenValue, &[char]), Err> {
         .iter()
         .take_while(|c| c.is_ascii_digit() || c == &&'.')
         .collect::<String>();
-    Fraction::from_str(&num_str).or(Err(ParseErr::InvalidNumber(num_str.clone())))?;
+    Fraction::from_str(&num_str).or(Err(Err::InvalidNumber(num_str.clone())))?;
     let num_len = num_str.chars().count();
     let token = TokenValue::from((Token::Number, num_str.as_str()));
     Ok((token, &chars[num_len..]))
@@ -155,7 +127,7 @@ fn check_expressions(tokens: &[TokenValue]) -> Result<(), Err> {
     }
     (expr_stack.len() == 1 && expr_stack.get(0) == Some(&&Token::Number))
         .then_some(())
-        .ok_or(Err::Expression(ExprErr::NoResult))
+        .ok_or(Err::NoResult)
 }
 
 fn collapse_expression(stack: &mut Vec<&Token>) -> bool {
@@ -211,16 +183,17 @@ fn check_block(stack: &mut Vec<TokenValue>, token: &TokenValue) -> Result<(), Er
     match token.token {
         Token::StartBlock => match token.value.as_str() {
             "(" => stack.push(token.clone()),
-            _ => Err(ExprErr::InvalidToken(token.clone()))?,
+            // _ => Err::InvalidToken(token.value().clone())?,
+            _ => Err(Err::InvalidToken(token.value().clone()))?,
         },
         Token::EndBlock => match token.value.as_str() {
             ")" => {
                 let expected_token = &TokenValue::from((Token::StartBlock, "("));
-                let actual_token = &stack.pop().ok_or(ExprErr::UnbalancedBlocks)?;
+                let actual_token = &stack.pop().ok_or(Err::UnbalancedBlocks)?;
                 let equals = expected_token == actual_token;
-                equals.then_some(()).ok_or(ExprErr::UnbalancedBlocks)?;
+                equals.then_some(()).ok_or(Err::UnbalancedBlocks)?;
             }
-            _ => Err(ExprErr::InvalidToken(token.clone()))?,
+            _ => Err(Err::InvalidToken(token.value().clone()))?,
         },
         _ => (),
     };
