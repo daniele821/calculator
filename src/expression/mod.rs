@@ -212,7 +212,7 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_parse_tokens() {
+    fn test_parse_tokens() -> Result<(), Err> {
         let expr = "12*3-(-7)";
         let expected_expr_tokens = vec![
             TokenValue::from((Token::Number, "12")),
@@ -224,21 +224,31 @@ mod tests {
             TokenValue::from((Token::Number, "7")),
             TokenValue::from((Token::EndBlock, ")")),
         ];
-        let actual_expr_tokens = parse_tokens(expr).unwrap();
+        let actual_expr_tokens = parse_tokens(expr)?;
         assert_eq!(expected_expr_tokens, actual_expr_tokens);
+        Ok(())
     }
 
     #[test]
-    fn test_check_expressions() {
-        let expression_valid1 = &parse_tokens("1 * 2 + 4").unwrap();
-        let expression_valid2 = &parse_tokens("-1 * 2 + -4").unwrap();
-        let expression_valid3 = &parse_tokens("1 + (12 * (2 + 3) + (3 + 4) + 3)").unwrap();
-        let expression_invalid1 = &parse_tokens("-1 * 2 + --4").unwrap();
-        let expression_invalid2 = &parse_tokens("( ) * )").unwrap();
+    fn test_check_expressions() -> Result<(), Err> {
+        let expression_valid1 = &parse_tokens("1 * 2 + 4")?;
+        let expression_valid2 = &parse_tokens("-1 * 2 + -4")?;
+        let expression_valid3 = &parse_tokens("1 + (12 * (2 + 3) + (3 + 4) + 3)")?;
+        let expression_invalid1 = &parse_tokens("-1 * 2 + --4")?;
+        let expression_invalid2 = &parse_tokens("( ) * )")?;
         assert!(check_expressions(expression_valid1).is_ok());
         assert!(check_expressions(expression_valid2).is_ok());
         assert!(check_expressions(expression_valid3).is_ok());
         assert!(check_expressions(expression_invalid1).is_err());
         assert!(check_expressions(expression_invalid2).is_err());
+        Ok(())
+    }
+
+    #[test]
+    fn test_solve_expr() -> Result<(), Err> {
+        let actual_result1 = solve_expr(parse_tokens("10 % 9 + 3 * 5 ^ 2 / 5 - -6")?)?;
+        let expected_result1 = Fraction::from(22);
+        assert_eq!(actual_result1, expected_result1);
+        Ok(())
     }
 }
