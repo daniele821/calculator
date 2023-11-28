@@ -2,10 +2,13 @@ use fraction::Fraction;
 use std::{env, str::FromStr};
 
 pub fn run() -> Result<Fraction, Err> {
-    let args = collect_args();
-    let tokens = parse_tokens(&args)?;
+    run_args(&collect_args())
+}
+
+pub fn run_args(expr: &str) -> Result<Fraction, Err> {
+    let tokens = parse_tokens(expr)?;
     check_expressions(&tokens)?;
-    todo!();
+    solve_expr(tokens)
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -198,6 +201,10 @@ fn check_block(stack: &mut Vec<TokenValue>, token: &TokenValue) -> Result<(), Er
         _ => (),
     };
     Ok(())
+}
+
+fn solve_expr(mut tokens: Vec<TokenValue>) -> Result<Fraction, Err> {
+    todo!()
 }
 
 #[cfg(test)]
