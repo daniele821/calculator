@@ -140,8 +140,7 @@ fn collapse_expression(stack: &mut Vec<&Token>) -> bool {
         && stack.get(len - 2) == Some(&&Token::BinaryOperator)
         && stack.get(len - 1) == Some(&&Token::Number)
     {
-        stack.remove(len - 1);
-        stack.remove(len - 2);
+        stack.drain(len - 2..=len - 1);
         return true;
     }
     if len == 2
@@ -165,9 +164,7 @@ fn collapse_expression(stack: &mut Vec<&Token>) -> bool {
         && stack.get(len - 2) == Some(&&Token::UnaryOperator)
         && stack.get(len - 1) == Some(&&Token::Number)
     {
-        stack.remove(len - 1);
-        stack.remove(len - 2);
-        stack.remove(len - 3);
+        stack.drain(len - 3..=len - 1);
         return true;
     }
     if len >= 3
