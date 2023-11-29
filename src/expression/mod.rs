@@ -190,7 +190,6 @@ fn check_block(stack: &mut Vec<TokenValue>, token: &TokenValue) -> Result<(), Er
     match token.token {
         Token::StartBlock => match token.value.as_str() {
             "(" => stack.push(token.clone()),
-            // _ => Err::InvalidToken(token.value().clone())?,
             _ => Err(Err::InvalidToken(token.value.clone()))?,
         },
         Token::EndBlock => match token.value.as_str() {
@@ -220,9 +219,41 @@ fn convert_token(tokens: Vec<TokenValue>) -> Result<Vec<TokenNum>, Err> {
     Ok(buffer)
 }
 
+fn priority(token: &TokenNum) -> Option<usize> {
+    let str = token.token.value.as_str();
+    let token = &token.token.token;
+    match token {
+        Token::StartBlock | Token::EndBlock => Some(0),
+        Token::UnaryOperator => Some(1),
+        Token::BinaryOperator => match str {
+            "^" => Some(2),
+            "/" | "*" | "%" => Some(3),
+            "+" | "-" => Some(4),
+            _ => None,
+        },
+        _ => None,
+    }
+}
+
+fn next_op_index(tokens: &[TokenNum]) -> Option<usize> {
+    let mut next_index = None::<usize>;
+    let mut next_priority = usize::MAX;
+    for (index, token) in tokens.iter().enumerate() {
+        if let Some(priority) = priority(token) {
+            if priority < next_priority {
+                next_index = Some(index);
+                next_priority = priority;
+            }
+        }
+    }
+    next_index
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    // ---------- TEST IMPORTANT FUNCTIONS ----------
 
     #[test]
     fn test_parse_tokens() -> Result<(), Err> {
@@ -262,6 +293,16 @@ mod tests {
         let actual_result1 = solve_expr(parse_tokens("10 % 9 + 3 * 5 ^ 2 / 5 - -6")?)?;
         let expected_result1 = Fraction::from(22);
         assert_eq!(actual_result1, expected_result1);
+        Ok(())
+    }
+
+    // ---------- TEST UTILITY FUNCTIONS ----------
+    #[test]
+    fn test_next_op_index() -> Result<(), Err> {
+        let expr = convert_token(parse_tokens("1 * 2 ^ 4")?)?;
+        assert_eq!(next_op_index(&expr), Some(3));
+        let expr = convert_token(parse_tokens("1")?)?;
+        assert_eq!(next_op_index(&expr), None);
         Ok(())
     }
 }
