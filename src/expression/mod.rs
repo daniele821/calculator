@@ -74,8 +74,9 @@ fn parse_tokens(expr: &str) -> Result<Vec<TokenValue>, Err> {
     let mut res = Vec::new();
     let chars_slice = &(expr.chars().collect::<Vec<char>>())[..];
     let mut chars_slice = skip_whitespaces(chars_slice);
+    let mut block_stack = Vec::new();
     while !chars_slice.is_empty() {
-        let (token, char_slice_tmp) = parse_token(chars_slice, &res)?;
+        let (token, char_slice_tmp) = parse_token(chars_slice, &res, &mut block_stack)?;
         chars_slice = skip_whitespaces(char_slice_tmp);
         res.push(token);
     }
@@ -85,6 +86,7 @@ fn parse_tokens(expr: &str) -> Result<Vec<TokenValue>, Err> {
 fn parse_token<'a>(
     chars: &'a [char],
     prev: &[TokenValue],
+    block_stack: &mut Vec<String>,
 ) -> Result<(TokenValue, &'a [char]), Err> {
     let char = chars.first().ok_or(Err::IllegalState)?;
     let str = &char.to_string()[..];
@@ -99,8 +101,29 @@ fn parse_token<'a>(
         '*' => (TokenValue::from((Token::BinaryOperator, str)), &chars[1..]),
         '/' => (TokenValue::from((Token::BinaryOperator, str)), &chars[1..]),
         '%' => (TokenValue::from((Token::BinaryOperator, str)), &chars[1..]),
-        '(' => (TokenValue::from((Token::StartBlock, str)), &chars[1..]),
-        ')' => (TokenValue::from((Token::EndBlock, str)), &chars[1..]),
+        '(' => {
+            block_stack.push(char.to_string());
+            (TokenValue::from((Token::StartBlock, str)), &chars[1..])
+        }
+        ')' => {
+            if let Some(str) = block_stack.last() {
+                if str != "(" {
+                    return Err(Err::UnbalancedBlocks);
+                }
+            }
+            block_stack.pop();
+            (TokenValue::from((Token::EndBlock, str)), &chars[1..])
+        }
+        '|' => match block_stack.last().map(|s| s.as_str()) {
+            Some("|") => {
+                block_stack.pop();
+                (TokenValue::from((Token::EndBlock, str)), &chars[1..])
+            }
+            _ => {
+                block_stack.push(char.to_string());
+                (TokenValue::from((Token::StartBlock, str)), &chars[1..])
+            }
+        },
         '0'..='9' => parse_number(chars)?,
         _ => Err(Err::InvalidToken(str.to_string()))?,
     })
@@ -188,12 +211,18 @@ fn collapse_expression(stack: &mut Vec<&Token>) -> bool {
 fn check_block(stack: &mut Vec<TokenValue>, token: &TokenValue) -> Result<(), Err> {
     match token.token {
         Token::StartBlock => match token.value.as_str() {
-            "(" => stack.push(token.clone()),
+            "(" | "|" => stack.push(token.clone()),
             _ => Err(Err::InvalidToken(token.value.clone()))?,
         },
         Token::EndBlock => match token.value.as_str() {
             ")" => {
                 let expected_token = &TokenValue::from((Token::StartBlock, "("));
+                let actual_token = &stack.pop().ok_or(Err::UnbalancedBlocks)?;
+                let equals = expected_token == actual_token;
+                equals.then_some(()).ok_or(Err::UnbalancedBlocks)?;
+            }
+            "|" => {
+                let expected_token = &TokenValue::from((Token::StartBlock, "|"));
                 let actual_token = &stack.pop().ok_or(Err::UnbalancedBlocks)?;
                 let equals = expected_token == actual_token;
                 equals.then_some(()).ok_or(Err::UnbalancedBlocks)?;
@@ -308,8 +337,8 @@ mod tests {
 
     #[test]
     fn test_parse_tokens() -> Result<(), Err> {
-        let expr = "12*3-(-7)";
-        let expected_expr_tokens = vec![
+        let expr1 = "12*3-(-7)";
+        let expected_expr_tokens1 = vec![
             TokenValue::from((Token::Number, "12")),
             TokenValue::from((Token::BinaryOperator, "*")),
             TokenValue::from((Token::Number, "3")),
@@ -319,8 +348,21 @@ mod tests {
             TokenValue::from((Token::Number, "7")),
             TokenValue::from((Token::EndBlock, ")")),
         ];
-        let actual_expr_tokens = parse_tokens(expr)?;
-        assert_eq!(expected_expr_tokens, actual_expr_tokens);
+        let actual_expr_tokens1 = parse_tokens(expr1)?;
+        let expr2 = "|(||)|||";
+        let expected_expr_tokens2 = vec![
+            TokenValue::from((Token::StartBlock, "|")),
+            TokenValue::from((Token::StartBlock, "(")),
+            TokenValue::from((Token::StartBlock, "|")),
+            TokenValue::from((Token::EndBlock, "|")),
+            TokenValue::from((Token::EndBlock, ")")),
+            TokenValue::from((Token::EndBlock, "|")),
+            TokenValue::from((Token::StartBlock, "|")),
+            TokenValue::from((Token::EndBlock, "|")),
+        ];
+        let actual_expr_tokens2 = parse_tokens(expr2)?;
+        assert_eq!(expected_expr_tokens1, actual_expr_tokens1);
+        assert_eq!(expected_expr_tokens2, actual_expr_tokens2);
         Ok(())
     }
 
@@ -353,10 +395,10 @@ mod tests {
     // ---------- TEST UTILITY FUNCTIONS ----------
     #[test]
     fn test_next_op_index() -> Result<(), Err> {
-        let expr = convert_token(parse_tokens("1 + 2 * 4")?)?;
-        assert_eq!(next_op_index(&expr), Some(3));
-        let expr = convert_token(parse_tokens("1")?)?;
-        assert_eq!(next_op_index(&expr), None);
+        let expr1 = convert_token(parse_tokens("1 + 2 * 4")?)?;
+        let expr2 = convert_token(parse_tokens("1")?)?;
+        assert_eq!(next_op_index(&expr1), Some(3));
+        assert_eq!(next_op_index(&expr2), None);
         Ok(())
     }
 }
