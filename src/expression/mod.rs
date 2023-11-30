@@ -8,7 +8,7 @@ pub enum Err {
     IllegalState,
     InvalidToken(String),
     InvalidNumber(String),
-    NoResult,
+    InvalidExpression,
     UnbalancedBlocks,
 }
 
@@ -137,7 +137,7 @@ fn check_expressions(tokens: &[TokenValue]) -> Result<(), Err> {
     }
     (expr_stack.len() == 1 && expr_stack.get(0) == Some(&&Token::Number))
         .then_some(())
-        .ok_or(Err::NoResult)
+        .ok_or(Err::InvalidExpression)
 }
 
 fn collapse_expression(stack: &mut Vec<&Token>) -> bool {
@@ -208,7 +208,12 @@ fn check_block(stack: &mut Vec<TokenValue>, token: &TokenValue) -> Result<(), Er
 
 fn solve_expr(tokens: Vec<TokenValue>) -> Result<Fraction, Err> {
     let mut tokens = convert_token(tokens)?;
-    todo!()
+    while next_op(&mut tokens)? {}
+    if tokens.len() != 1 {
+        return Err(Err::IllegalState);
+    }
+    let token = tokens.get(0).ok_or(Err::IllegalState)?;
+    Ok(token.num.ok_or(Err::IllegalState))?
 }
 
 fn convert_token(tokens: Vec<TokenValue>) -> Result<Vec<TokenNum>, Err> {
@@ -247,6 +252,55 @@ fn next_op_index(tokens: &[TokenNum]) -> Option<usize> {
         }
     }
     next_index
+}
+
+fn next_op(tokens: &mut Vec<TokenNum>) -> Result<bool, Err> {
+    let index = match next_op_index(tokens) {
+        Some(index) => index,
+        None => return Ok(false),
+    };
+    let op = match tokens.get(index) {
+        Some(token) => token,
+        None => return Err(Err::IllegalState),
+    };
+    match &op.token.token {
+        Token::StartBlock | Token::EndBlock => todo!("blocks not implemented!"),
+        Token::BinaryOperator => {
+            let bef_token = tokens
+                .get(index.saturating_sub(1))
+                .ok_or(Err::IllegalState)?;
+            let aft_token = tokens.get(index + 1).ok_or(Err::IllegalState)?;
+            let bef = &bef_token.num.ok_or(Err::IllegalState)?;
+            let aft = &aft_token.num.ok_or(Err::IllegalState)?;
+            let res = match op.token.value.as_str() {
+                "-" => bef - aft,
+                "+" => bef + aft,
+                "*" => bef * aft,
+                "/" => bef / aft,
+                "%" => bef % aft,
+                "^" => todo!("^ operation not implemented!"),
+                _ => Err(Err::IllegalState)?,
+            };
+            let res = res.to_string();
+            let token_res = TokenNum::from_token(&TokenValue::from((Token::Number, &res[..])))?;
+            tokens.drain(index - 1..=index + 1);
+            tokens.insert(index - 1, token_res);
+        }
+        Token::UnaryOperator => {
+            let num_token = tokens.get(index + 1).ok_or(Err::IllegalState)?;
+            let num = &num_token.num.ok_or(Err::IllegalState)?;
+            let res = match op.token.value.as_str() {
+                "-" => -num,
+                _ => Err(Err::IllegalState)?,
+            };
+            let res = res.to_string();
+            let token_res = TokenNum::from_token(&TokenValue::from((Token::Number, &res[..])))?;
+            tokens.drain(index..=index + 1);
+            tokens.insert(index, token_res);
+        }
+        Token::Number => Err(Err::IllegalState)?,
+    }
+    Ok(true)
 }
 
 #[cfg(test)]
@@ -290,9 +344,15 @@ mod tests {
 
     #[test]
     fn test_solve_expr() -> Result<(), Err> {
-        let actual_result1 = solve_expr(parse_tokens("10 % 9 + 3 * 5 ^ 2 / 5 - -6")?)?;
-        let expected_result1 = Fraction::from(22);
+        let actual_result1 = solve_expr(parse_tokens("10 % 9 + 3 * 5 * 2 / 5 - -6")?)?;
+        let actual_result2 = solve_expr(parse_tokens("10 % 9 + 3 * 5 ^ 2 / 5 - -6")?)?;
+        let actual_result3 = solve_expr(parse_tokens("10 % (6 / (9 - 3) * 3) * 5 ^ 2 / 5 - -6")?)?;
+        let expected_result1 = Fraction::from(13);
+        let expected_result2 = Fraction::from(22);
+        let expected_result3 = Fraction::from_str("7.5").or(Err(Err::IllegalState))?;
         assert_eq!(actual_result1, expected_result1);
+        assert_eq!(actual_result2, expected_result2);
+        assert_eq!(actual_result3, expected_result3);
         Ok(())
     }
 
