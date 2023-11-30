@@ -99,7 +99,6 @@ fn parse_token<'a>(
         '*' => (TokenValue::from((Token::BinaryOperator, str)), &chars[1..]),
         '/' => (TokenValue::from((Token::BinaryOperator, str)), &chars[1..]),
         '%' => (TokenValue::from((Token::BinaryOperator, str)), &chars[1..]),
-        '^' => (TokenValue::from((Token::BinaryOperator, str)), &chars[1..]),
         '(' => (TokenValue::from((Token::StartBlock, str)), &chars[1..]),
         ')' => (TokenValue::from((Token::EndBlock, str)), &chars[1..]),
         '0'..='9' => parse_number(chars)?,
@@ -231,9 +230,8 @@ fn priority(token: &TokenNum) -> Option<usize> {
         Token::StartBlock | Token::EndBlock => Some(0),
         Token::UnaryOperator => Some(1),
         Token::BinaryOperator => match str {
-            "^" => Some(2),
-            "/" | "*" | "%" => Some(3),
-            "+" | "-" => Some(4),
+            "/" | "*" | "%" => Some(2),
+            "+" | "-" => Some(3),
             _ => None,
         },
         _ => None,
@@ -278,7 +276,6 @@ fn next_op(tokens: &mut Vec<TokenNum>) -> Result<bool, Err> {
                 "*" => bef * aft,
                 "/" => bef / aft,
                 "%" => bef % aft,
-                "^" => todo!("^ operation not implemented!"),
                 _ => Err(Err::IllegalState)?,
             };
             let res = res.to_string();
@@ -345,21 +342,18 @@ mod tests {
     #[test]
     fn test_solve_expr() -> Result<(), Err> {
         let actual_result1 = solve_expr(parse_tokens("10 % 9 + 3 * 5 * 2 / 5 - -6")?)?;
-        let actual_result2 = solve_expr(parse_tokens("10 % 9 + 3 * 5 ^ 2 / 5 - -6")?)?;
-        let actual_result3 = solve_expr(parse_tokens("10 % (6 / (9 - 3) * 3) * 5 ^ 2 / 5 - -6")?)?;
+        let actual_result2 = solve_expr(parse_tokens("10 % (6 / (9 - 3) * 3) * 5 * 3 / 5 - -6")?)?;
         let expected_result1 = Fraction::from(13);
-        let expected_result2 = Fraction::from(22);
-        let expected_result3 = Fraction::from_str("7.5").or(Err(Err::IllegalState))?;
+        let expected_result2 = Fraction::from_str("6.9").or(Err(Err::IllegalState))?;
         assert_eq!(actual_result1, expected_result1);
         assert_eq!(actual_result2, expected_result2);
-        assert_eq!(actual_result3, expected_result3);
         Ok(())
     }
 
     // ---------- TEST UTILITY FUNCTIONS ----------
     #[test]
     fn test_next_op_index() -> Result<(), Err> {
-        let expr = convert_token(parse_tokens("1 * 2 ^ 4")?)?;
+        let expr = convert_token(parse_tokens("1 + 2 * 4")?)?;
         assert_eq!(next_op_index(&expr), Some(3));
         let expr = convert_token(parse_tokens("1")?)?;
         assert_eq!(next_op_index(&expr), None);
