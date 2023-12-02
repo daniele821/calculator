@@ -1,3 +1,5 @@
+#![allow(dead_code)]
+
 use crate::{BinaryOp, EndBlock, StartBlock, Token, UnaryOp};
 use fraction::Fraction;
 use std::str::FromStr;
