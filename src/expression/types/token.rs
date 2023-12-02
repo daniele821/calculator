@@ -167,6 +167,10 @@ impl StartBlock {
             StartBlock::Abs => EndBlock::Abs,
         }
     }
+
+    pub fn is_corrisp(&self, other: EndBlock) -> bool {
+        self.corrisp() == other
+    }
 }
 
 impl EndBlock {
@@ -175,5 +179,9 @@ impl EndBlock {
             EndBlock::Bracket => StartBlock::Bracket,
             EndBlock::Abs => StartBlock::Abs,
         }
+    }
+
+    pub fn is_corrisp(&self, other: StartBlock) -> bool {
+        self.corrisp() == other
     }
 }
