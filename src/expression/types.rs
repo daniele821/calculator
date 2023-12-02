@@ -125,6 +125,18 @@ impl Display for Token {
     }
 }
 
+impl PartialOrd for Token {
+    fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
+        Some(self.cmp(other))
+    }
+}
+
+impl Ord for Token {
+    fn cmp(&self, other: &Self) -> std::cmp::Ordering {
+        self.priority().cmp(&other.priority())
+    }
+}
+
 impl Token {
     pub fn eq_type(&self, other: &Self) -> bool {
         match self {
@@ -133,6 +145,19 @@ impl Token {
             Token::UnaryOperator(_) => matches!(other, Token::UnaryOperator(_)),
             Token::BinaryOperator(_) => matches!(other, Token::BinaryOperator(_)),
             Token::Number(_) => matches!(other, Token::Number(_)),
+        }
+    }
+
+    pub fn priority(&self) -> usize {
+        match self {
+            Token::StartBlock(_) => 0,
+            Token::EndBlock(_) => 1,
+            Token::UnaryOperator(_) => 2,
+            Token::BinaryOperator(op) => match op {
+                BinaryOp::Mul | BinaryOp::Mod | BinaryOp::Div => 3,
+                BinaryOp::Add | BinaryOp::Sub => 4,
+            },
+            Token::Number(_) => 5,
         }
     }
 }
