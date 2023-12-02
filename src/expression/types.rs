@@ -1,11 +1,11 @@
-#![allow(dead_code, unused)]
+// #![allow(dead_code, unused)]
 
 use fraction::Fraction;
-use std::fmt::{write, Display};
+use std::fmt::Display;
 
 // ------------------------------ TOKEN ------------------------------
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq, Eq)]
 pub enum Token {
     StartBlock(StartBlock),
     EndBlock(EndBlock),
@@ -14,24 +14,24 @@ pub enum Token {
     Number(Fraction),
 }
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq, Eq)]
 pub enum StartBlock {
     Bracket,
     Abs,
 }
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq, Eq)]
 pub enum EndBlock {
     Bracket,
     Abs,
 }
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq, Eq)]
 pub enum UnaryOp {
     Neg,
 }
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq, Eq)]
 pub enum BinaryOp {
     Add,
     Sub,
@@ -122,5 +122,17 @@ impl Display for Token {
             Token::Number(str) => str.to_string(),
         };
         write!(f, "{str}")
+    }
+}
+
+impl Token {
+    pub fn eq_type(&self, other: &Self) -> bool {
+        match self {
+            Token::StartBlock(_) => matches!(other, Token::StartBlock(_)),
+            Token::EndBlock(_) => matches!(other, Token::EndBlock(_)),
+            Token::UnaryOperator(_) => matches!(other, Token::UnaryOperator(_)),
+            Token::BinaryOperator(_) => matches!(other, Token::BinaryOperator(_)),
+            Token::Number(_) => matches!(other, Token::Number(_)),
+        }
     }
 }
