@@ -1,8 +1,6 @@
 use fraction::Fraction;
 use std::{fmt::Display, mem};
 
-// ------------------------------ TOKEN ------------------------------
-
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Token {
     StartBlock(StartBlock),
