@@ -1,10 +1,27 @@
 use crate::{BinaryOp, EndBlock, StartBlock, Token, UnaryOp};
+use fraction::Fraction;
+use std::str::FromStr;
 
 fn parse_tokens(str: &str) -> Vec<Token> {
+    let mut acc_num = String::new();
     let mut stack = Vec::<StartBlock>::new();
     let mut res = Vec::new();
 
     for c in str.chars() {
+        if !acc_num.is_empty() {
+            match c {
+                '0'..='9' | '.' => (),
+                _ => {
+                    res.push(Token::Number(Fraction::from_str(&acc_num).unwrap()));
+                    acc_num = String::new();
+                }
+            }
+        }
+
+        if c.is_whitespace() {
+            continue;
+        }
+
         match c {
             '+' => res.push(Token::from(BinaryOp::Add)),
             '-' => match res.last() {
@@ -37,9 +54,13 @@ fn parse_tokens(str: &str) -> Vec<Token> {
                     res.push(Token::from(StartBlock::Abs))
                 }
             },
-            '0'..='9' | '.' => {}
+            '0'..='9' | '.' => acc_num += c.to_string().as_str(),
             _ => panic!("invalid token!"),
         }
+    }
+
+    if !acc_num.is_empty() {
+        res.push(Token::Number(Fraction::from_str(&acc_num).unwrap()));
     }
 
     res
@@ -47,7 +68,9 @@ fn parse_tokens(str: &str) -> Vec<Token> {
 
 #[cfg(test)]
 mod tests {
-    use crate::{EndBlock, StartBlock, Token};
+    use crate::{BinaryOp, EndBlock, StartBlock, Token, UnaryOp};
+    use fraction::Fraction;
+    use std::str::FromStr;
 
     #[test]
     fn test_parsing() {
@@ -62,6 +85,29 @@ mod tests {
             Token::from(StartBlock::Bracket),
             Token::from(EndBlock::Bracket),
         ];
+        let actual_res2 = super::parse_tokens("1 -5 *-(|-37|*4.8)+5 %99/7");
+        let expected_res2 = vec![
+            Token::from(Fraction::from(1)),
+            Token::from(BinaryOp::Sub),
+            Token::from(Fraction::from(5)),
+            Token::from(BinaryOp::Mul),
+            Token::from(UnaryOp::Neg),
+            Token::from(StartBlock::Bracket),
+            Token::from(StartBlock::Abs),
+            Token::from(UnaryOp::Neg),
+            Token::from(Fraction::from(37)),
+            Token::from(EndBlock::Abs),
+            Token::from(BinaryOp::Mul),
+            Token::from(Fraction::from_str("4.8").unwrap()),
+            Token::from(EndBlock::Bracket),
+            Token::from(BinaryOp::Add),
+            Token::from(Fraction::from(5)),
+            Token::from(BinaryOp::Mod),
+            Token::from(Fraction::from(99)),
+            Token::from(BinaryOp::Div),
+            Token::from(Fraction::from(7)),
+        ];
         assert_eq!(expected_res1, actual_res1);
+        assert_eq!(expected_res2, actual_res2);
     }
 }
