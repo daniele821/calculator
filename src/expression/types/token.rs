@@ -3,7 +3,7 @@ use std::{fmt::Display, mem};
 
 // ------------------------------ TOKEN ------------------------------
 
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Token {
     StartBlock(StartBlock),
     EndBlock(EndBlock),
@@ -12,24 +12,24 @@ pub enum Token {
     Number(Fraction),
 }
 
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum StartBlock {
     Bracket,
     Abs,
 }
 
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum EndBlock {
     Bracket,
     Abs,
 }
 
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum UnaryOp {
     Neg,
 }
 
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum BinaryOp {
     Add,
     Sub,
