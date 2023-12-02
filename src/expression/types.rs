@@ -3,6 +3,8 @@
 use fraction::Fraction;
 use std::fmt::{write, Display};
 
+// ------------------------------ TOKEN ------------------------------
+
 #[derive(Debug)]
 pub enum Token {
     StartBlock(StartBlock),
@@ -112,12 +114,13 @@ impl Display for BinaryOp {
 
 impl Display for Token {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            Token::StartBlock(str) => write!(f, "{str}"),
-            Token::EndBlock(str) => write!(f, "{str}"),
-            Token::UnaryOperator(str) => write!(f, "{str}"),
-            Token::BinaryOperator(str) => write!(f, "{str}"),
-            Token::Number(str) => write!(f, "{str}"),
-        }
+        let str = match self {
+            Token::StartBlock(str) => str.to_string(),
+            Token::EndBlock(str) => str.to_string(),
+            Token::UnaryOperator(str) => str.to_string(),
+            Token::BinaryOperator(str) => str.to_string(),
+            Token::Number(str) => str.to_string(),
+        };
+        write!(f, "{str}")
     }
 }
