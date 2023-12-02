@@ -72,6 +72,24 @@ pub fn parse_tokens(str: &str) -> Vec<Token> {
     res
 }
 
+pub fn fix_tokens(tokens: &mut Vec<Token>) {
+    let str = Token::StartBlock(StartBlock::Abs);
+    let end = Token::EndBlock(EndBlock::Abs);
+
+    // RULE1: "(expr)(expr)" ---> "(expr)*(expr)"
+    let rule1_pos = tokens
+        .iter()
+        .enumerate()
+        .filter(|(_, t)| t.eq_type(&end))
+        .filter(|(i, _)| tokens.get(i + 1).map(|t| t.eq_type(&str)).unwrap_or(false))
+        .map(|(i, _)| i)
+        .rev()
+        .collect::<Vec<_>>();
+    for pos in rule1_pos {
+        tokens.insert(pos + 1, Token::BinaryOperator(BinaryOp::Mul));
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use crate::{BinaryOp, EndBlock, StartBlock, Token, UnaryOp};
@@ -115,5 +133,24 @@ mod tests {
         ];
         assert_eq!(expected_res1, actual_res1);
         assert_eq!(expected_res2, actual_res2);
+    }
+
+    #[test]
+    fn test_fix() {
+        let mut actual_tokens_rule1 = super::parse_tokens("()(())||");
+        super::fix_tokens(&mut actual_tokens_rule1);
+        let expected_tokens_rule1 = vec![
+            Token::from(StartBlock::Bracket),
+            Token::from(EndBlock::Bracket),
+            Token::from(BinaryOp::Mul),
+            Token::from(StartBlock::Bracket),
+            Token::from(StartBlock::Bracket),
+            Token::from(EndBlock::Bracket),
+            Token::from(EndBlock::Bracket),
+            Token::from(BinaryOp::Mul),
+            Token::from(StartBlock::Abs),
+            Token::from(EndBlock::Abs),
+        ];
+        assert_eq!(actual_tokens_rule1, expected_tokens_rule1);
     }
 }
