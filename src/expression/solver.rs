@@ -2,7 +2,7 @@ use crate::{BinaryOp, EndBlock, StartBlock, Token, UnaryOp};
 use fraction::Fraction;
 use std::str::FromStr;
 
-fn parse_tokens(str: &str) -> Vec<Token> {
+pub fn parse_tokens(str: &str) -> Vec<Token> {
     let mut acc_num = String::new();
     let mut stack = Vec::<StartBlock>::new();
     let mut res = Vec::new();
@@ -61,6 +61,10 @@ fn parse_tokens(str: &str) -> Vec<Token> {
 
     if !acc_num.is_empty() {
         res.push(Token::Number(Fraction::from_str(&acc_num).unwrap()));
+    }
+
+    if !stack.is_empty() {
+        panic!("unbalanced blocks!")
     }
 
     res
