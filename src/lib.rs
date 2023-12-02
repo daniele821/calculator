@@ -1,3 +1,7 @@
+mod common;
 mod expression;
 
-pub use expression::types::token::{BinaryOp, EndBlock, StartBlock, Token, UnaryOp};
+pub use crate::{
+    common::fmt,
+    expression::types::token::{BinaryOp, EndBlock, StartBlock, Token, UnaryOp},
+};
