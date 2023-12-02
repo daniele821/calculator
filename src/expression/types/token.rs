@@ -1,5 +1,5 @@
 use fraction::Fraction;
-use std::fmt::Display;
+use std::{fmt::Display, mem};
 
 // ------------------------------ TOKEN ------------------------------
 
@@ -137,13 +137,7 @@ impl Ord for Token {
 
 impl Token {
     pub fn eq_type(&self, other: &Self) -> bool {
-        match self {
-            Token::StartBlock(_) => matches!(other, Token::StartBlock(_)),
-            Token::EndBlock(_) => matches!(other, Token::EndBlock(_)),
-            Token::UnaryOperator(_) => matches!(other, Token::UnaryOperator(_)),
-            Token::BinaryOperator(_) => matches!(other, Token::BinaryOperator(_)),
-            Token::Number(_) => matches!(other, Token::Number(_)),
-        }
+        mem::discriminant(self) == mem::discriminant(other)
     }
 
     pub fn priority(&self) -> usize {
