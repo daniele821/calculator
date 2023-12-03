@@ -1,5 +1,7 @@
 #![allow(dead_code, unused)]
 
+use crate::common::convert;
+
 use super::types::{
     error::{CheckErr, Error, ParseErr},
     token::{BinaryOp, EndBlock, StartBlock, Token, TokenType, UnaryOp},
@@ -138,6 +140,12 @@ pub fn check_tokens(tokens: &[Token]) -> Result<(), Error> {
     const UNA: &TokenType = &TokenType::UnaryOperator;
 
     for token in tokens {
+        // check blocks
+        match token {
+            Token::StartBlock(start) => block_stack.push(start.clone()),
+            Token::EndBlock(end) => assert_eq!(block_stack.pop(), Some(end.corrisp())),
+            _ => (),
+        }
         // collapse expression
         token_stack.push(TokenType::from(token));
         loop {
@@ -165,26 +173,16 @@ pub fn check_tokens(tokens: &[Token]) -> Result<(), Error> {
             }
             break;
         }
-        // check blocks
-        match token {
-            Token::StartBlock(start) => block_stack.push(start.clone()),
-            Token::EndBlock(end) => assert_eq!(block_stack.pop(), Some(end.corrisp())),
-            _ => (),
-        }
     }
 
+    // errors for unbalanced blocks
+    if !block_stack.is_empty() {
+        let block_stack: Vec<Token> = convert(&block_stack);
+        Err(CheckErr::UnbalancedBlocks(block_stack))?
+    }
     // errors for expression collapsion
     if token_stack.len() != 1 || token_stack.first() != Some(&TokenType::Number) {
         Err(CheckErr::ExprWithNoResult(token_stack))?
-    }
-    // errors for unbalanced blocks
-    if !block_stack.is_empty() {
-        Err(CheckErr::UnbalancedBlocks(
-            block_stack
-                .iter()
-                .map(|t| Token::from(t.clone()))
-                .collect::<Vec<Token>>(),
-        ))?
     }
 
     Ok(())
