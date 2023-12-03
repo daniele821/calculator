@@ -14,20 +14,18 @@ pub enum FixRules {
     BlockProduct,
     CloseBlocks,
 }
-
 impl FixRules {
     pub fn all() -> Vec<Self> {
         vec![FixRules::BlockProduct, FixRules::CloseBlocks]
     }
-
     pub fn none() -> Vec<Self> {
         vec![]
     }
 }
 
-pub fn parse(str: &str, fixes: Option<&[FixRules]>) -> Result<Vec<Token>, Error> {
+pub fn parse(str: &str, fixes: &[FixRules]) -> Result<Vec<Token>, Error> {
     let mut tokens = parse_tokens(str)?;
-    fix_tokens(&mut tokens, fixes.unwrap_or(&FixRules::none()));
+    fix_tokens(&mut tokens, fixes);
     check_tokens(&tokens)?;
     Ok(tokens)
 }
@@ -48,7 +46,12 @@ pub fn parse_tokens(str: &str) -> Result<Vec<Token>, Error> {
         }
 
         match c {
-            '+' => res.push(Token::from(BinaryOp::Add)),
+            '+' => match res.last() {
+                Some(Token::Number(_)) | Some(Token::EndBlock(_)) => {
+                    res.push(Token::from(BinaryOp::Add))
+                }
+                _ => res.push(Token::from(UnaryOp::Pos)),
+            },
             '-' => match res.last() {
                 Some(Token::Number(_)) | Some(Token::EndBlock(_)) => {
                     res.push(Token::from(BinaryOp::Sub))
@@ -154,16 +157,8 @@ pub fn check_tokens(tokens: &[Token]) -> Result<(), Error> {
                 token_stack.drain(len - 2..=len - 1);
                 continue;
             }
-            if check_token(&mut token_stack, &[UNA, NUM], true) {
+            if check_token(&mut token_stack, &[UNA, NUM], false) {
                 token_stack.remove(len - 2);
-                continue;
-            }
-            if check_token(&mut token_stack, &[STA, UNA, NUM], false) {
-                token_stack.remove(len - 2);
-                continue;
-            }
-            if check_token(&mut token_stack, &[NUM, BIN, UNA, NUM], false) {
-                token_stack.drain(len - 3..=len - 1);
                 continue;
             }
             if check_token(&mut token_stack, &[STA, NUM, END], false) {
@@ -289,12 +284,10 @@ mod tests {
 
     #[test]
     fn test_check() -> Result<(), Error> {
-        let valid1 = super::check_tokens(&super::parse_tokens("-(-12)+34.8*(12+|7|*-(5+|-1|))")?);
-        let invalid1 = super::check_tokens(&super::parse_tokens("12---12")?);
-        let invalid2 = super::check_tokens(&super::parse_tokens("13*()+9")?);
+        let valid1 = super::check_tokens(&super::parse_tokens("+--+3.8*(1+|7|*-(5+|-1|))")?);
+        let invalid1 = super::check_tokens(&super::parse_tokens("13*()+9")?);
         assert!(valid1.is_ok());
         assert!(invalid1.is_err());
-        assert!(invalid2.is_err());
         Ok(())
     }
 }

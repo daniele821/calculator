@@ -1,6 +1,6 @@
 #![allow(dead_code, unused)]
 
-use super::token::{Token, TokenType, UnaryOp};
+use super::token::{Token, TokenType};
 
 #[derive(Debug, Clone, Eq, PartialEq)]
 pub enum Error {
@@ -18,8 +18,8 @@ pub enum ParseErr {
 #[derive(Debug, Clone, Eq, PartialEq)]
 pub enum CheckErr {
     UnbalancedBlocks(Vec<Token>),
-    NotAllowedRepOp(Token),
     ExprWithNoResult(Vec<TokenType>),
+    InvalidAdiacents(Vec<Token>),
 }
 
 #[derive(Debug, Clone, Eq, PartialEq)]
