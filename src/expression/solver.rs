@@ -1,12 +1,21 @@
-#![allow(dead_code)]
+#![allow(dead_code, unused)]
 
-use crate::{BinaryOp, EndBlock, StartBlock, Token, TokenType, UnaryOp};
-use fraction::Fraction;
-use std::{collections::HashSet, str::FromStr};
+use super::types::token::{BinaryOp, EndBlock, StartBlock, Token, TokenType, UnaryOp};
+use fraction::{Fraction, Zero};
+use std::{io::Write, str::FromStr};
 
-#[derive(Debug, Clone, Eq, Hash, PartialEq)]
-pub enum RuleSet {
+#[derive(Debug, Clone, Eq, PartialEq)]
+pub enum FixRules {
     BlockProduct,
+}
+
+impl FixRules {
+    pub fn all() -> Vec<Self> {
+        vec![FixRules::BlockProduct]
+    }
+    pub fn none() -> Vec<Self> {
+        vec![]
+    }
 }
 
 pub fn parse_tokens(str: &str) -> Vec<Token> {
@@ -77,8 +86,8 @@ pub fn parse_tokens(str: &str) -> Vec<Token> {
     res
 }
 
-pub fn fix_tokens(tokens: &mut Vec<Token>, rules: &HashSet<RuleSet>) {
-    if rules.contains(&RuleSet::BlockProduct) {
+pub fn fix_tokens(tokens: &mut Vec<Token>, rules: &[FixRules]) {
+    if rules.contains(&FixRules::BlockProduct) {
         let rule1_pos = tokens
             .iter()
             .enumerate()
@@ -98,11 +107,75 @@ pub fn fix_tokens(tokens: &mut Vec<Token>, rules: &HashSet<RuleSet>) {
     }
 }
 
+pub fn check_tokens(tokens: &[Token]) {
+    let mut stack = Vec::<TokenType>::new();
+    const NUM: &TokenType = &TokenType::Number;
+    const STA: &TokenType = &TokenType::StartBlock;
+    const END: &TokenType = &TokenType::EndBlock;
+    const BIN: &TokenType = &TokenType::BinaryOperator;
+    const UNA: &TokenType = &TokenType::UnaryOperator;
+
+    println!();
+    for token in tokens {
+        stack.push(token.into());
+        print!("{:?}\t--->\t", stack);
+        loop {
+            let len = stack.len();
+            if check_token(&mut stack, &[NUM, BIN, NUM], false) {
+                stack.drain(len - 2..=len - 1);
+                continue;
+            }
+            if check_token(&mut stack, &[UNA, NUM], true) {
+                stack.remove(len - 2);
+                continue;
+            }
+            if check_token(&mut stack, &[STA, UNA, NUM], false) {
+                stack.remove(len - 2);
+                continue;
+            }
+            if check_token(&mut stack, &[NUM, BIN, UNA, NUM], false) {
+                stack.drain(len - 3..=len - 1);
+                continue;
+            }
+            if check_token(&mut stack, &[STA, NUM, END], false) {
+                stack.remove(len - 1);
+                stack.remove(len - 3);
+                continue;
+            }
+            break;
+        }
+        println!("{:?}", stack);
+    }
+
+    if stack.len() != 1 || stack.first() != Some(&TokenType::Number) {
+        panic!("invalid expression!");
+    }
+}
+
+pub fn check_token(stack: &mut Vec<TokenType>, elems: &[&TokenType], strictly_eq: bool) -> bool {
+    let stack_len = stack.len();
+    let elems_len = elems.len();
+    if (stack_len < elems_len) || (stack_len > elems_len && strictly_eq) {
+        return false;
+    }
+    !stack
+        .iter()
+        .rev()
+        .take(elems_len)
+        .enumerate()
+        .any(|(i, t)| &t != elems.get(elems_len - i - 1).unwrap())
+}
+
 #[cfg(test)]
 mod tests {
-    use crate::{BinaryOp, EndBlock, RuleSet, StartBlock, Token, UnaryOp};
+    use crate::expression::{
+        solver::FixRules,
+        types::token::{BinaryOp, EndBlock, StartBlock, Token, UnaryOp},
+    };
     use fraction::Fraction;
-    use std::{collections::HashSet, str::FromStr};
+    use std::str::FromStr;
+
+    use super::{check_tokens, parse_tokens};
 
     #[test]
     fn test_parsing() {
@@ -145,10 +218,8 @@ mod tests {
 
     #[test]
     fn test_fix() {
-        let mut ruleset = HashSet::new();
         let mut actual_tokens_rule1 = super::parse_tokens("()(())||");
-        ruleset.insert(RuleSet::BlockProduct);
-        super::fix_tokens(&mut actual_tokens_rule1, &ruleset);
+        super::fix_tokens(&mut actual_tokens_rule1, &FixRules::all());
         let expected_tokens_rule1 = vec![
             Token::from(StartBlock::Bracket),
             Token::from(EndBlock::Bracket),
@@ -162,5 +233,10 @@ mod tests {
             Token::from(EndBlock::Abs),
         ];
         assert_eq!(actual_tokens_rule1, expected_tokens_rule1);
+    }
+
+    #[test]
+    fn test_check() {
+        todo!("write test once errors are implemented!");
     }
 }

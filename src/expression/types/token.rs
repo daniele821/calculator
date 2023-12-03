@@ -1,3 +1,5 @@
+#![allow(dead_code, unused)]
+
 use fraction::Fraction;
 use std::{fmt::Display, mem};
 
