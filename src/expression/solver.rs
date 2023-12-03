@@ -1,8 +1,13 @@
 #![allow(dead_code)]
 
-use crate::{BinaryOp, EndBlock, StartBlock, Token, UnaryOp};
+use crate::{BinaryOp, EndBlock, StartBlock, Token, TokenType, UnaryOp};
 use fraction::Fraction;
-use std::str::FromStr;
+use std::{collections::HashSet, str::FromStr};
+
+#[derive(Debug, Clone, Eq, Hash, PartialEq)]
+pub enum RuleSet {
+    BlockProduct,
+}
 
 pub fn parse_tokens(str: &str) -> Vec<Token> {
     let mut acc_num = String::new();
@@ -72,29 +77,32 @@ pub fn parse_tokens(str: &str) -> Vec<Token> {
     res
 }
 
-pub fn fix_tokens(tokens: &mut Vec<Token>) {
-    let str = Token::StartBlock(StartBlock::Abs);
-    let end = Token::EndBlock(EndBlock::Abs);
-
-    // RULE1: "(expr)(expr)" ---> "(expr)*(expr)"
-    let rule1_pos = tokens
-        .iter()
-        .enumerate()
-        .filter(|(_, t)| t.eq_type(&end))
-        .filter(|(i, _)| tokens.get(i + 1).map(|t| t.eq_type(&str)).unwrap_or(false))
-        .map(|(i, _)| i)
-        .rev()
-        .collect::<Vec<_>>();
-    for pos in rule1_pos {
-        tokens.insert(pos + 1, Token::BinaryOperator(BinaryOp::Mul));
+pub fn fix_tokens(tokens: &mut Vec<Token>, rules: &HashSet<RuleSet>) {
+    if rules.contains(&RuleSet::BlockProduct) {
+        let rule1_pos = tokens
+            .iter()
+            .enumerate()
+            .filter(|(_, t)| t.eq_tokentype(&TokenType::EndBlock))
+            .filter(|(i, _)| {
+                tokens
+                    .get(i + 1)
+                    .map(|t| t.eq_tokentype(&TokenType::StartBlock))
+                    .unwrap_or(false)
+            })
+            .map(|(i, _)| i)
+            .rev()
+            .collect::<Vec<_>>();
+        for pos in rule1_pos {
+            tokens.insert(pos + 1, Token::BinaryOperator(BinaryOp::Mul));
+        }
     }
 }
 
 #[cfg(test)]
 mod tests {
-    use crate::{BinaryOp, EndBlock, StartBlock, Token, UnaryOp};
+    use crate::{BinaryOp, EndBlock, RuleSet, StartBlock, Token, UnaryOp};
     use fraction::Fraction;
-    use std::str::FromStr;
+    use std::{collections::HashSet, str::FromStr};
 
     #[test]
     fn test_parsing() {
@@ -137,8 +145,10 @@ mod tests {
 
     #[test]
     fn test_fix() {
+        let mut ruleset = HashSet::new();
         let mut actual_tokens_rule1 = super::parse_tokens("()(())||");
-        super::fix_tokens(&mut actual_tokens_rule1);
+        ruleset.insert(RuleSet::BlockProduct);
+        super::fix_tokens(&mut actual_tokens_rule1, &ruleset);
         let expected_tokens_rule1 = vec![
             Token::from(StartBlock::Bracket),
             Token::from(EndBlock::Bracket),
