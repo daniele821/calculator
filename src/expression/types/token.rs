@@ -1,7 +1,11 @@
 #![allow(dead_code, unused)]
 
 use fraction::Fraction;
-use std::{fmt::Display, mem};
+use std::{fmt::Display, mem, str::FromStr};
+
+use crate::expression::types::error::ParseErr;
+
+use super::error::Error;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Token {
@@ -157,6 +161,11 @@ impl Ord for Token {
 }
 
 impl Token {
+    pub fn parse_num(str: &str) -> Result<Self, Error> {
+        let num = Fraction::from_str(str).or(Err(ParseErr::InvalidNumber(str.to_string())))?;
+        Ok(Token::Number(num))
+    }
+
     pub fn priority(&self) -> usize {
         match self {
             Token::StartBlock(_) => 0,

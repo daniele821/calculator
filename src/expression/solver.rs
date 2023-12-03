@@ -1,6 +1,9 @@
 #![allow(dead_code, unused)]
 
-use super::types::token::{BinaryOp, EndBlock, StartBlock, Token, TokenType, UnaryOp};
+use super::types::{
+    error::{CheckErr, Error, ParseErr},
+    token::{BinaryOp, EndBlock, StartBlock, Token, TokenType, UnaryOp},
+};
 use fraction::{Fraction, Zero};
 use std::{io::Write, str::FromStr};
 
@@ -13,25 +16,21 @@ impl FixRules {
     pub fn all() -> Vec<Self> {
         vec![FixRules::BlockProduct]
     }
+
     pub fn none() -> Vec<Self> {
         vec![]
     }
 }
 
-pub fn parse_tokens(str: &str) -> Vec<Token> {
+pub fn parse_tokens(str: &str) -> Result<Vec<Token>, Error> {
     let mut acc_num = String::new();
     let mut stack = Vec::<StartBlock>::new();
     let mut res = Vec::new();
 
     for c in str.chars() {
-        if !acc_num.is_empty() {
-            match c {
-                '0'..='9' | '.' => (),
-                _ => {
-                    res.push(Token::Number(Fraction::from_str(&acc_num).unwrap()));
-                    acc_num = String::new();
-                }
-            }
+        if !acc_num.is_empty() && !c.is_ascii_digit() && c != '.' {
+            res.push(Token::parse_num(&acc_num)?);
+            acc_num.clear();
         }
 
         if c.is_whitespace() {
@@ -58,7 +57,9 @@ pub fn parse_tokens(str: &str) -> Vec<Token> {
                     stack.pop();
                     res.push(Token::from(EndBlock::Bracket));
                 }
-                _ => panic!("unbalanced blocks!"),
+                _ => Err(CheckErr::UnbalancedBlocks(vec![Token::from(
+                    EndBlock::Bracket,
+                )]))?,
             },
             '|' => match stack.last() {
                 Some(StartBlock::Abs) => {
@@ -71,19 +72,21 @@ pub fn parse_tokens(str: &str) -> Vec<Token> {
                 }
             },
             '0'..='9' | '.' => acc_num += c.to_string().as_str(),
-            _ => panic!("invalid token!"),
+            _ => Err(ParseErr::InvalidToken(c.to_string()))?,
         }
     }
 
     if !acc_num.is_empty() {
-        res.push(Token::Number(Fraction::from_str(&acc_num).unwrap()));
+        res.push(Token::parse_num(&acc_num)?);
     }
 
     if !stack.is_empty() {
-        panic!("unbalanced blocks!")
+        Err(CheckErr::UnbalancedBlocks(
+            stack.iter().map(|t| Token::StartBlock(t.clone())).collect(),
+        ))?;
     }
 
-    res
+    Ok(res)
 }
 
 pub fn fix_tokens(tokens: &mut Vec<Token>, rules: &[FixRules]) {
@@ -107,7 +110,7 @@ pub fn fix_tokens(tokens: &mut Vec<Token>, rules: &[FixRules]) {
     }
 }
 
-pub fn check_tokens(tokens: &[Token]) {
+pub fn check_tokens(tokens: &[Token]) -> Result<(), Error> {
     let mut stack = Vec::<TokenType>::new();
     const NUM: &TokenType = &TokenType::Number;
     const STA: &TokenType = &TokenType::StartBlock;
@@ -115,10 +118,8 @@ pub fn check_tokens(tokens: &[Token]) {
     const BIN: &TokenType = &TokenType::BinaryOperator;
     const UNA: &TokenType = &TokenType::UnaryOperator;
 
-    println!();
     for token in tokens {
-        stack.push(token.into());
-        print!("{:?}\t--->\t", stack);
+        stack.push(TokenType::from(token));
         loop {
             let len = stack.len();
             if check_token(&mut stack, &[NUM, BIN, NUM], false) {
@@ -144,12 +145,12 @@ pub fn check_tokens(tokens: &[Token]) {
             }
             break;
         }
-        println!("{:?}", stack);
     }
 
     if stack.len() != 1 || stack.first() != Some(&TokenType::Number) {
-        panic!("invalid expression!");
+        Err(CheckErr::ExprWithNoResult(stack))?
     }
+    Ok(())
 }
 
 pub fn check_token(stack: &mut Vec<TokenType>, elems: &[&TokenType], strictly_eq: bool) -> bool {
@@ -170,7 +171,10 @@ pub fn check_token(stack: &mut Vec<TokenType>, elems: &[&TokenType], strictly_eq
 mod tests {
     use crate::expression::{
         solver::FixRules,
-        types::token::{BinaryOp, EndBlock, StartBlock, Token, UnaryOp},
+        types::{
+            error::Error,
+            token::{BinaryOp, EndBlock, StartBlock, Token, UnaryOp},
+        },
     };
     use fraction::Fraction;
     use std::str::FromStr;
@@ -178,8 +182,8 @@ mod tests {
     use super::{check_tokens, parse_tokens};
 
     #[test]
-    fn test_parsing() {
-        let actual_res1 = super::parse_tokens("(||||)()");
+    fn test_parsing() -> Result<(), Error> {
+        let actual_res1 = super::parse_tokens("(||||)()")?;
         let expected_res1 = vec![
             Token::from(StartBlock::Bracket),
             Token::from(StartBlock::Abs),
@@ -190,7 +194,7 @@ mod tests {
             Token::from(StartBlock::Bracket),
             Token::from(EndBlock::Bracket),
         ];
-        let actual_res2 = super::parse_tokens("1 -5 *-(|-37|*4.8)+5 %99/7");
+        let actual_res2 = super::parse_tokens("1 -5 *-(|-37|*4.8)+5 %99/7")?;
         let expected_res2 = vec![
             Token::from(Fraction::from(1)),
             Token::from(BinaryOp::Sub),
@@ -214,11 +218,12 @@ mod tests {
         ];
         assert_eq!(expected_res1, actual_res1);
         assert_eq!(expected_res2, actual_res2);
+        Ok(())
     }
 
     #[test]
-    fn test_fix() {
-        let mut actual_tokens_rule1 = super::parse_tokens("()(())||");
+    fn test_fix() -> Result<(), Error> {
+        let mut actual_tokens_rule1 = super::parse_tokens("()(())||")?;
         super::fix_tokens(&mut actual_tokens_rule1, &FixRules::all());
         let expected_tokens_rule1 = vec![
             Token::from(StartBlock::Bracket),
@@ -233,10 +238,17 @@ mod tests {
             Token::from(EndBlock::Abs),
         ];
         assert_eq!(actual_tokens_rule1, expected_tokens_rule1);
+        Ok(())
     }
 
     #[test]
-    fn test_check() {
-        todo!("write test once errors are implemented!");
+    fn test_check() -> Result<(), Error> {
+        let valid1 = super::check_tokens(&super::parse_tokens("-(-12)+34.8*(12+|7|*-(5+|-1|))")?);
+        let invalid1 = super::check_tokens(&super::parse_tokens("12---12")?);
+        let invalid2 = super::check_tokens(&super::parse_tokens("13*()+9")?);
+        assert!(valid1.is_ok());
+        assert!(invalid1.is_err());
+        assert!(invalid2.is_err());
+        Ok(())
     }
 }
