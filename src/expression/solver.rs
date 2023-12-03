@@ -18,15 +18,22 @@ impl FixRules {
     pub fn all() -> Vec<Self> {
         vec![FixRules::BlockProduct, FixRules::CloseBlocks]
     }
-    pub fn none() -> Vec<Self> {
-        vec![]
+}
+
+#[derive(Debug, Clone, Eq, PartialEq)]
+pub enum CheckRules {
+    AllowSignMul,
+}
+impl CheckRules {
+    pub fn all() -> Vec<Self> {
+        vec![CheckRules::AllowSignMul]
     }
 }
 
-pub fn parse(str: &str, fixes: &[FixRules]) -> Result<Vec<Token>, Error> {
+pub fn parse(str: &str, fixes: &[FixRules], checks: &[CheckRules]) -> Result<Vec<Token>, Error> {
     let mut tokens = parse_tokens(str)?;
     fix_tokens(&mut tokens, fixes);
-    check_tokens(&tokens)?;
+    check_tokens(&tokens, checks)?;
     Ok(tokens)
 }
 
@@ -133,7 +140,7 @@ pub fn fix_tokens(tokens: &mut Vec<Token>, rules: &[FixRules]) {
     }
 }
 
-pub fn check_tokens(tokens: &[Token]) -> Result<(), Error> {
+pub fn check_tokens(tokens: &[Token], checks: &[CheckRules]) -> Result<(), Error> {
     let mut block_stack = Vec::<StartBlock>::new();
     let mut token_stack = Vec::<TokenType>::new();
     const NUM: &TokenType = &TokenType::Number;
@@ -141,6 +148,8 @@ pub fn check_tokens(tokens: &[Token]) -> Result<(), Error> {
     const END: &TokenType = &TokenType::EndBlock;
     const BIN: &TokenType = &TokenType::BinaryOperator;
     const UNA: &TokenType = &TokenType::UnaryOperator;
+
+    check_rules(tokens, checks)?;
 
     for token in tokens {
         // check blocks
@@ -197,14 +206,34 @@ pub fn check_token(stack: &mut Vec<TokenType>, elems: &[&TokenType], strictly_eq
         .any(|(i, t)| &t != elems.get(elems_len - i - 1).unwrap())
 }
 
+pub fn check_rules(tokens: &[Token], checks: &[CheckRules]) -> Result<(), Error> {
+    const POS: &Token = &Token::UnaryOperator(UnaryOp::Pos);
+    const NEG: &Token = &Token::UnaryOperator(UnaryOp::Neg);
+    const ADD: &Token = &Token::BinaryOperator(BinaryOp::Add);
+    const SUB: &Token = &Token::BinaryOperator(BinaryOp::Sub);
+
+    for pair in tokens.windows(2) {
+        match &pair[0] {
+            POS | NEG | ADD | SUB => match &pair[1] {
+                POS | NEG => {
+                    if checks.contains(&CheckRules::AllowSignMul) {
+                        Err(CheckErr::InvalidAdiacents(pair.to_vec()))?;
+                    }
+                }
+                _ => (),
+            },
+            _ => (),
+        };
+    }
+
+    Ok(())
+}
+
 #[cfg(test)]
 mod tests {
     use crate::expression::{
-        solver::FixRules,
-        types::{
-            error::Error,
-            token::{BinaryOp, EndBlock, StartBlock, Token, UnaryOp},
-        },
+        solver::*,
+        types::{error::*, token::*},
     };
     use fraction::Fraction;
     use std::str::FromStr;
@@ -253,8 +282,10 @@ mod tests {
 
     #[test]
     fn test_fix() -> Result<(), Error> {
+        let rule1 = &[FixRules::BlockProduct];
+        let rule2 = &[FixRules::CloseBlocks];
         let mut actual_tokens_rule1 = super::parse_tokens("()(())||")?;
-        super::fix_tokens(&mut actual_tokens_rule1, &FixRules::all());
+        super::fix_tokens(&mut actual_tokens_rule1, rule1);
         let expected_tokens_rule1 = vec![
             Token::from(StartBlock::Bracket),
             Token::from(EndBlock::Bracket),
@@ -268,7 +299,7 @@ mod tests {
             Token::from(EndBlock::Abs),
         ];
         let mut actual_tokens_rule2 = super::parse_tokens("(|(")?;
-        super::fix_tokens(&mut actual_tokens_rule2, &FixRules::all());
+        super::fix_tokens(&mut actual_tokens_rule2, rule2);
         let expected_tokens_rule2 = vec![
             Token::from(StartBlock::Bracket),
             Token::from(StartBlock::Abs),
@@ -279,15 +310,24 @@ mod tests {
         ];
         assert_eq!(actual_tokens_rule1, expected_tokens_rule1);
         assert_eq!(actual_tokens_rule2, expected_tokens_rule2);
+        assert_ne!(actual_tokens_rule1, expected_tokens_rule2);
+        assert_ne!(actual_tokens_rule2, expected_tokens_rule1);
         Ok(())
     }
 
     #[test]
     fn test_check() -> Result<(), Error> {
-        let valid1 = super::check_tokens(&super::parse_tokens("+--+3.8*(1+|7|*-(5+|-1|))")?);
-        let invalid1 = super::check_tokens(&super::parse_tokens("13*()+9")?);
+        let rule1 = &[CheckRules::AllowSignMul];
+        let valid1 = super::check_tokens(&super::parse_tokens("-+3.8*(1+|7|*-(5+|-1|))")?, &[]);
+        let invalid1 = super::check_tokens(&super::parse_tokens("13*()+9")?, &[]);
+        let test_rule1_ok1 = super::check_tokens(&super::parse_tokens("1--3++1-+-+5")?, &[]);
+        let test_rule1_err1 = super::check_tokens(&super::parse_tokens("1--3++1-+-+5")?, rule1);
+        let test_rule1_err2 = super::check_tokens(&super::parse_tokens("1--3++1-+5")?, rule1);
         assert!(valid1.is_ok());
         assert!(invalid1.is_err());
+        assert!(test_rule1_ok1.is_ok());
+        assert!(test_rule1_err1.is_err());
+        assert!(test_rule1_err2.is_err());
         Ok(())
     }
 }
