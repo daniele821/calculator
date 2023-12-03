@@ -11,6 +11,15 @@ pub enum Token {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
+pub enum TokenType {
+    StartBlock,
+    EndBlock,
+    UnaryOperator,
+    BinaryOperator,
+    Number,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum StartBlock {
     Bracket,
     Abs,
@@ -63,6 +72,18 @@ impl From<BinaryOp> for Token {
 impl From<Fraction> for Token {
     fn from(value: Fraction) -> Self {
         Token::Number(value)
+    }
+}
+
+impl From<&Token> for TokenType {
+    fn from(value: &Token) -> Self {
+        match value {
+            Token::StartBlock(_) => Self::StartBlock,
+            Token::EndBlock(_) => Self::EndBlock,
+            Token::UnaryOperator(_) => Self::UnaryOperator,
+            Token::BinaryOperator(_) => Self::BinaryOperator,
+            Token::Number(_) => Self::Number,
+        }
     }
 }
 
@@ -134,10 +155,6 @@ impl Ord for Token {
 }
 
 impl Token {
-    pub fn eq_type(&self, other: &Self) -> bool {
-        mem::discriminant(self) == mem::discriminant(other)
-    }
-
     pub fn priority(&self) -> usize {
         match self {
             Token::StartBlock(_) => 0,
@@ -149,6 +166,20 @@ impl Token {
             },
             Token::Number(_) => 5,
         }
+    }
+
+    pub fn eq_type(&self, other: &Self) -> bool {
+        mem::discriminant(self) == mem::discriminant(other)
+    }
+
+    pub fn eq_tokentype(&self, other: &TokenType) -> bool {
+        mem::discriminant(&TokenType::from(self)) == mem::discriminant(other)
+    }
+}
+
+impl TokenType {
+    pub fn eq_tokentype(&self, other: &Token) -> bool {
+        other.eq_tokentype(self)
     }
 }
 
