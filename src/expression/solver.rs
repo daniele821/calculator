@@ -10,16 +10,24 @@ use std::{io::Write, str::FromStr};
 #[derive(Debug, Clone, Eq, PartialEq)]
 pub enum FixRules {
     BlockProduct,
+    CloseBlocks,
 }
 
 impl FixRules {
     pub fn all() -> Vec<Self> {
-        vec![FixRules::BlockProduct]
+        vec![FixRules::BlockProduct, FixRules::CloseBlocks]
     }
 
     pub fn none() -> Vec<Self> {
         vec![]
     }
+}
+
+pub fn parse(str: &str, fixes: Option<&[FixRules]>) -> Result<Vec<Token>, Error> {
+    let mut tokens = parse_tokens(str)?;
+    fix_tokens(&mut tokens, fixes.unwrap_or(&FixRules::none()));
+    check_tokens(&tokens)?;
+    Ok(tokens)
 }
 
 pub fn parse_tokens(str: &str) -> Result<Vec<Token>, Error> {
@@ -80,12 +88,6 @@ pub fn parse_tokens(str: &str) -> Result<Vec<Token>, Error> {
         res.push(Token::parse_num(&acc_num)?);
     }
 
-    if !stack.is_empty() {
-        Err(CheckErr::UnbalancedBlocks(
-            stack.iter().map(|t| Token::StartBlock(t.clone())).collect(),
-        ))?;
-    }
-
     Ok(res)
 }
 
@@ -108,10 +110,27 @@ pub fn fix_tokens(tokens: &mut Vec<Token>, rules: &[FixRules]) {
             tokens.insert(pos + 1, Token::BinaryOperator(BinaryOp::Mul));
         }
     }
+
+    if rules.contains(&FixRules::CloseBlocks) {
+        let mut stack = Vec::<StartBlock>::new();
+        for token in tokens.iter().filter(|t| {
+            t.eq_tokentype(&TokenType::StartBlock) || t.eq_tokentype(&TokenType::EndBlock)
+        }) {
+            match token {
+                Token::StartBlock(start) => stack.push(start.clone()),
+                Token::EndBlock(end) => assert_eq!(stack.pop(), Some(end.corrisp())),
+                _ => (),
+            }
+        }
+        for block in stack.iter().rev() {
+            tokens.push(Token::from(block.corrisp()));
+        }
+    }
 }
 
 pub fn check_tokens(tokens: &[Token]) -> Result<(), Error> {
-    let mut stack = Vec::<TokenType>::new();
+    let mut block_stack = Vec::<StartBlock>::new();
+    let mut token_stack = Vec::<TokenType>::new();
     const NUM: &TokenType = &TokenType::Number;
     const STA: &TokenType = &TokenType::StartBlock;
     const END: &TokenType = &TokenType::EndBlock;
@@ -119,37 +138,55 @@ pub fn check_tokens(tokens: &[Token]) -> Result<(), Error> {
     const UNA: &TokenType = &TokenType::UnaryOperator;
 
     for token in tokens {
-        stack.push(TokenType::from(token));
+        // collapse expression
+        token_stack.push(TokenType::from(token));
         loop {
-            let len = stack.len();
-            if check_token(&mut stack, &[NUM, BIN, NUM], false) {
-                stack.drain(len - 2..=len - 1);
+            let len = token_stack.len();
+            if check_token(&mut token_stack, &[NUM, BIN, NUM], false) {
+                token_stack.drain(len - 2..=len - 1);
                 continue;
             }
-            if check_token(&mut stack, &[UNA, NUM], true) {
-                stack.remove(len - 2);
+            if check_token(&mut token_stack, &[UNA, NUM], true) {
+                token_stack.remove(len - 2);
                 continue;
             }
-            if check_token(&mut stack, &[STA, UNA, NUM], false) {
-                stack.remove(len - 2);
+            if check_token(&mut token_stack, &[STA, UNA, NUM], false) {
+                token_stack.remove(len - 2);
                 continue;
             }
-            if check_token(&mut stack, &[NUM, BIN, UNA, NUM], false) {
-                stack.drain(len - 3..=len - 1);
+            if check_token(&mut token_stack, &[NUM, BIN, UNA, NUM], false) {
+                token_stack.drain(len - 3..=len - 1);
                 continue;
             }
-            if check_token(&mut stack, &[STA, NUM, END], false) {
-                stack.remove(len - 1);
-                stack.remove(len - 3);
+            if check_token(&mut token_stack, &[STA, NUM, END], false) {
+                token_stack.remove(len - 1);
+                token_stack.remove(len - 3);
                 continue;
             }
             break;
         }
+        // check blocks
+        match token {
+            Token::StartBlock(start) => block_stack.push(start.clone()),
+            Token::EndBlock(end) => assert_eq!(block_stack.pop(), Some(end.corrisp())),
+            _ => (),
+        }
     }
 
-    if stack.len() != 1 || stack.first() != Some(&TokenType::Number) {
-        Err(CheckErr::ExprWithNoResult(stack))?
+    // errors for expression collapsion
+    if token_stack.len() != 1 || token_stack.first() != Some(&TokenType::Number) {
+        Err(CheckErr::ExprWithNoResult(token_stack))?
     }
+    // errors for unbalanced blocks
+    if !block_stack.is_empty() {
+        Err(CheckErr::UnbalancedBlocks(
+            block_stack
+                .iter()
+                .map(|t| Token::from(t.clone()))
+                .collect::<Vec<Token>>(),
+        ))?
+    }
+
     Ok(())
 }
 
@@ -237,7 +274,18 @@ mod tests {
             Token::from(StartBlock::Abs),
             Token::from(EndBlock::Abs),
         ];
+        let mut actual_tokens_rule2 = super::parse_tokens("(|(")?;
+        super::fix_tokens(&mut actual_tokens_rule2, &FixRules::all());
+        let expected_tokens_rule2 = vec![
+            Token::from(StartBlock::Bracket),
+            Token::from(StartBlock::Abs),
+            Token::from(StartBlock::Bracket),
+            Token::from(EndBlock::Bracket),
+            Token::from(EndBlock::Abs),
+            Token::from(EndBlock::Bracket),
+        ];
         assert_eq!(actual_tokens_rule1, expected_tokens_rule1);
+        assert_eq!(actual_tokens_rule2, expected_tokens_rule2);
         Ok(())
     }
 
