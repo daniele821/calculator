@@ -11,7 +11,9 @@ use std::{io::Write, str::FromStr};
 
 #[derive(Debug, Clone, Eq, PartialEq)]
 pub enum FixRules {
+    /// fixes: "(expr) (expr)" => "(expr) * (expr)"
     BlockProduct,
+    /// fixes: "(|(" => "(|()|)"
     CloseBlocks,
 }
 impl FixRules {
@@ -22,6 +24,7 @@ impl FixRules {
 
 #[derive(Debug, Clone, Eq, PartialEq)]
 pub enum CheckRules {
+    /// allows: "expr+-expr", "++expr", "-+-+expr++expr", ...
     AllowSignMul,
 }
 impl CheckRules {
