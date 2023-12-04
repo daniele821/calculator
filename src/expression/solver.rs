@@ -42,7 +42,7 @@ pub fn parse(str: &str, fixes: &[FixRules], checks: &[CheckRules]) -> Result<Vec
     Ok(tokens)
 }
 
-pub fn parse_tokens(str: &str) -> Result<Vec<Token>, Error> {
+fn parse_tokens(str: &str) -> Result<Vec<Token>, Error> {
     let mut acc_num = String::new();
     let mut stack = Vec::<StartBlock>::new();
     let mut res = Vec::new();
@@ -96,7 +96,7 @@ pub fn parse_tokens(str: &str) -> Result<Vec<Token>, Error> {
                     res.push(Token::from(StartBlock::Abs))
                 }
             },
-            '0'..='9' | '.' => acc_num += c.to_string().as_str(),
+            '0'..='9' | '.' => acc_num.push(c),
             _ => Err(ParseErr::InvalidToken(c.to_string()))?,
         }
     }
@@ -108,18 +108,16 @@ pub fn parse_tokens(str: &str) -> Result<Vec<Token>, Error> {
     Ok(res)
 }
 
-pub fn fix_tokens(tokens: &mut Vec<Token>, rules: &[FixRules]) {
+fn fix_tokens(tokens: &mut Vec<Token>, rules: &[FixRules]) {
+    const END: &TokenType = &TokenType::EndBlock;
+    const START: &TokenType = &TokenType::StartBlock;
+
     if rules.contains(&FixRules::BlockProduct) {
         let rule1_pos = tokens
             .iter()
             .enumerate()
-            .filter(|(_, t)| t.eq_tokentype(&TokenType::EndBlock))
-            .filter(|(i, _)| {
-                tokens
-                    .get(i + 1)
-                    .map(|t| t.eq_tokentype(&TokenType::StartBlock))
-                    .unwrap_or(false)
-            })
+            .filter(|(_, t)| t.eq_tokentype(END))
+            .filter(|(i, _)| tokens.get(i + 1).map(|t| t.eq_tokentype(START)) == Some(true))
             .map(|(i, _)| i)
             .rev()
             .collect::<Vec<_>>();
@@ -130,9 +128,7 @@ pub fn fix_tokens(tokens: &mut Vec<Token>, rules: &[FixRules]) {
 
     if rules.contains(&FixRules::CloseBlocks) {
         let mut stack = Vec::<StartBlock>::new();
-        for token in tokens.iter().filter(|t| {
-            t.eq_tokentype(&TokenType::StartBlock) || t.eq_tokentype(&TokenType::EndBlock)
-        }) {
+        for token in tokens.iter() {
             match token {
                 Token::StartBlock(start) => stack.push(start.clone()),
                 Token::EndBlock(end) => assert_eq!(stack.pop(), Some(end.corrisp())),
@@ -145,15 +141,16 @@ pub fn fix_tokens(tokens: &mut Vec<Token>, rules: &[FixRules]) {
     }
 }
 
-pub fn check_tokens(tokens: &[Token], checks: &[CheckRules]) -> Result<(), Error> {
-    let mut block_stack = Vec::<StartBlock>::new();
-    let mut token_stack = Vec::<TokenType>::new();
+fn check_tokens(tokens: &[Token], checks: &[CheckRules]) -> Result<(), Error> {
     const NUM: &TokenType = &TokenType::Number;
     const STA: &TokenType = &TokenType::StartBlock;
     const END: &TokenType = &TokenType::EndBlock;
     const BIN: &TokenType = &TokenType::BinaryOperator;
     const UNA: &TokenType = &TokenType::UnaryOperator;
+    let mut block_stack = Vec::<StartBlock>::new();
+    let mut token_stack = Vec::<TokenType>::new();
 
+    // check rules are respected
     check_rules(tokens, checks)?;
 
     for token in tokens {
@@ -197,7 +194,7 @@ pub fn check_tokens(tokens: &[Token], checks: &[CheckRules]) -> Result<(), Error
     Ok(())
 }
 
-pub fn check_token(stack: &mut Vec<TokenType>, elems: &[&TokenType], strictly_eq: bool) -> bool {
+fn check_token(stack: &mut Vec<TokenType>, elems: &[&TokenType], strictly_eq: bool) -> bool {
     let stack_len = stack.len();
     let elems_len = elems.len();
     if (stack_len < elems_len) || (stack_len > elems_len && strictly_eq) {
@@ -211,7 +208,7 @@ pub fn check_token(stack: &mut Vec<TokenType>, elems: &[&TokenType], strictly_eq
         .any(|(i, t)| &t != elems.get(elems_len - i - 1).unwrap())
 }
 
-pub fn check_rules(tokens: &[Token], checks: &[CheckRules]) -> Result<(), Error> {
+fn check_rules(tokens: &[Token], checks: &[CheckRules]) -> Result<(), Error> {
     const POS: &Token = &Token::UnaryOperator(UnaryOp::Pos);
     const NEG: &Token = &Token::UnaryOperator(UnaryOp::Neg);
     const ADD: &Token = &Token::BinaryOperator(BinaryOp::Add);
