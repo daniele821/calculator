@@ -212,18 +212,12 @@ pub fn check_rules(tokens: &[Token], checks: &[CheckRules]) -> Result<(), Error>
     const ADD: &Token = &Token::BinaryOperator(BinaryOp::Add);
     const SUB: &Token = &Token::BinaryOperator(BinaryOp::Sub);
 
+    let sign_mul = checks.contains(&CheckRules::AllowSignMul);
+
     for pair in tokens.windows(2) {
-        match &pair[0] {
-            POS | NEG | ADD | SUB => match &pair[1] {
-                POS | NEG => {
-                    if checks.contains(&CheckRules::AllowSignMul) {
-                        Err(CheckErr::InvalidAdiacents(pair.to_vec()))?;
-                    }
-                }
-                _ => (),
-            },
-            _ => (),
-        };
+        if sign_mul && [POS, NEG, ADD, SUB].contains(&&pair[0]) && [POS, NEG].contains(&&pair[1]) {
+            Err(CheckErr::InvalidAdiacents(pair.to_vec()))?;
+        }
     }
 
     Ok(())
