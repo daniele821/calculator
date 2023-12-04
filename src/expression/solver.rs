@@ -7,7 +7,7 @@ use crate::{
         token::{BinaryOp, EndBlock, StartBlock, Token, TokenType, UnaryOp},
     },
 };
-use fraction::Fraction;
+use fraction::{Fraction, Zero};
 use std::ops::{Neg, Range, RangeBounds, RangeInclusive};
 
 const STA: TokenType = TokenType::StartBlock;
@@ -229,11 +229,11 @@ fn check_rules(tokens: &[Token], checks: &[CheckRules]) -> Result<(), Error> {
 }
 
 pub fn solve(tokens: &mut Vec<Token>) -> Result<Fraction, Error> {
-    while solve_one_op(tokens) {}
+    while solve_one_op(tokens)? {}
     get_result(tokens)
 }
 
-pub fn solve_one_op(tokens: &mut Vec<Token>) -> bool {
+pub fn solve_one_op(tokens: &mut Vec<Token>) -> Result<bool, Error> {
     let index = next_operation(tokens);
     if let Some(index) = index {
         let token = &tokens[index];
@@ -273,15 +273,25 @@ pub fn solve_one_op(tokens: &mut Vec<Token>) -> bool {
                 BinaryOp::Sub => nums[0] - nums[1],
                 BinaryOp::Mul => nums[0] * nums[1],
                 BinaryOp::Mod => nums[0] % nums[1],
-                BinaryOp::Div => nums[0] / nums[1],
+                BinaryOp::Div => {
+                    if nums[1].is_zero() {
+                        let vec = vec![
+                            Token::from(*nums[0]),
+                            Token::from(BinaryOp::Div),
+                            Token::from(*nums[1]),
+                        ];
+                        Err(SolveErr::OperIllegalValues(vec))?;
+                    }
+                    nums[0] / nums[1]
+                }
             },
             _ => unreachable!(),
         };
         tokens.drain(from..=to);
         tokens.insert(from, Token::Number(num));
-        return true;
+        return Ok(true);
     }
-    false
+    Ok(false)
 }
 
 pub fn get_result(tokens: &[Token]) -> Result<Fraction, Error> {

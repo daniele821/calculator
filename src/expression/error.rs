@@ -27,6 +27,7 @@ pub enum CheckErr {
 #[derive(Debug, Clone, Eq, PartialEq)]
 pub enum SolveErr {
     NotRationalNumber(Fraction),
+    OperIllegalValues(Vec<Token>),
 }
 
 impl From<ParseErr> for Error {
