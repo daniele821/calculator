@@ -287,7 +287,7 @@ pub fn solve_one_op(tokens: &mut Vec<Token>) -> bool {
 pub fn get_result(tokens: &[Token]) -> Result<Fraction, Error> {
     assert_eq!(tokens.len(), 1);
     let res = tokens.first().unwrap().num().unwrap();
-    if !res.is_finite() {
+    if res.is_nan() || res.is_infinite() {
         Err(SolveErr::NotRationalNumber(*res))?;
     }
     Ok(*res)
