@@ -287,6 +287,9 @@ pub fn solve_one_op(tokens: &mut Vec<Token>) -> Result<bool, Error> {
             },
             _ => unreachable!(),
         };
+        if num.is_nan() || num.is_infinite() {
+            Err(SolveErr::NotRationalNumber(num))?;
+        }
         tokens.drain(from..=to);
         tokens.insert(from, Token::Number(num));
         return Ok(true);
