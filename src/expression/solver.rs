@@ -21,12 +21,17 @@ impl FixRules {
 
 #[derive(Debug, Clone, Eq, PartialEq)]
 pub enum CheckRules {
-    /// allows: "expr+-expr", "++expr", "-+-+expr++expr", ...
-    AllowSignMul,
+    /// deny: "++expr", "-+-+expr++expr", allow: "expr+-expr", "expr--expr"
+    DenyMultipleSign,
+    /// deny: "++expr", "-+-+expr++expr", "expr+-expr", "expr--expr"
+    DenyAllMultipleSign,
 }
 impl CheckRules {
     pub fn all() -> Vec<Self> {
-        vec![CheckRules::AllowSignMul]
+        vec![
+            CheckRules::DenyMultipleSign,
+            CheckRules::DenyAllMultipleSign,
+        ]
     }
 }
 
@@ -212,10 +217,14 @@ pub fn check_rules(tokens: &[Token], checks: &[CheckRules]) -> Result<(), Error>
     const ADD: &Token = &Token::BinaryOperator(BinaryOp::Add);
     const SUB: &Token = &Token::BinaryOperator(BinaryOp::Sub);
 
-    let sign_mul = checks.contains(&CheckRules::AllowSignMul);
+    let mul_sign = checks.contains(&CheckRules::DenyMultipleSign);
+    let all_sign = checks.contains(&CheckRules::DenyAllMultipleSign);
 
     for pair in tokens.windows(2) {
-        if sign_mul && [POS, NEG, ADD, SUB].contains(&&pair[0]) && [POS, NEG].contains(&&pair[1]) {
+        if all_sign && [POS, NEG, ADD, SUB].contains(&&pair[0]) && [POS, NEG].contains(&&pair[1]) {
+            Err(CheckErr::InvalidAdiacents(pair.to_vec()))?;
+        }
+        if mul_sign && [POS, NEG].contains(&&pair[0]) && [POS, NEG].contains(&&pair[1]) {
             Err(CheckErr::InvalidAdiacents(pair.to_vec()))?;
         }
     }
@@ -304,17 +313,20 @@ mod tests {
 
     #[test]
     fn test_check() -> Result<(), Error> {
-        let rule1 = &[CheckRules::AllowSignMul];
+        let rule1 = &[CheckRules::DenyMultipleSign];
+        let rule2 = &[CheckRules::DenyAllMultipleSign];
         let valid1 = super::check_tokens(&super::parse_tokens("-+3.8*(1+|7|*-(5+|-1|))")?, &[]);
         let invalid1 = super::check_tokens(&super::parse_tokens("13*()+9")?, &[]);
-        let test_rule1_ok1 = super::check_tokens(&super::parse_tokens("1--3++1-+-+5")?, &[]);
-        let test_rule1_err1 = super::check_tokens(&super::parse_tokens("1--3++1-+-+5")?, rule1);
-        let test_rule1_err2 = super::check_tokens(&super::parse_tokens("1--3++1-+5")?, rule1);
+        let test_rule1_ok = super::check_tokens(&super::parse_tokens("-3++5+-1-+4--2")?, rule1);
+        let test_rule1_err = super::check_tokens(&super::parse_tokens("--5")?, rule1);
+        let test_rule2_ok = super::check_tokens(&super::parse_tokens("-3+5")?, rule2);
+        let test_rule2_err = super::check_tokens(&super::parse_tokens("4--5")?, rule2);
         assert!(valid1.is_ok());
         assert!(invalid1.is_err());
-        assert!(test_rule1_ok1.is_ok());
-        assert!(test_rule1_err1.is_err());
-        assert!(test_rule1_err2.is_err());
+        assert!(test_rule1_ok.is_ok());
+        assert!(test_rule1_err.is_err());
+        assert!(test_rule2_ok.is_ok());
+        assert!(test_rule2_err.is_err());
         Ok(())
     }
 }
