@@ -5,10 +5,8 @@ mod shell;
 pub use crate::{
     common::{convert, fmt},
     expression::{
+        error::{CheckErr, Error, ParseErr, SolveErr},
         solver::{parse, CheckRules, FixRules},
-        types::{
-            error::{CheckErr, Error, ParseErr, SolveErr},
-            token::{BinaryOp, EndBlock, StartBlock, Token, TokenType, UnaryOp},
-        },
+        token::{BinaryOp, EndBlock, StartBlock, Token, TokenType, UnaryOp},
     },
 };
