@@ -1,8 +1,10 @@
 #![allow(dead_code, unused)]
 
-use crate::*;
-use fraction::{Fraction, Zero};
-use std::{io::Write, str::FromStr};
+use super::{
+    error::{CheckErr, Error, ParseErr},
+    token::{BinaryOp, EndBlock, StartBlock, Token, TokenType, UnaryOp},
+};
+use crate::common;
 
 #[derive(Debug, Clone, Eq, PartialEq)]
 pub enum FixRules {
@@ -179,7 +181,7 @@ pub fn check_tokens(tokens: &[Token], checks: &[CheckRules]) -> Result<(), Error
 
     // errors for unbalanced blocks
     if !block_stack.is_empty() {
-        let block_stack: Vec<Token> = convert(&block_stack);
+        let block_stack: Vec<Token> = common::convert(&block_stack);
         Err(CheckErr::UnbalancedBlocks(block_stack))?
     }
     // errors for expression collapsion
@@ -229,11 +231,7 @@ pub fn check_rules(tokens: &[Token], checks: &[CheckRules]) -> Result<(), Error>
 
 #[cfg(test)]
 mod tests {
-    use crate::*;
-    use fraction::Fraction;
-    use std::str::FromStr;
-
-    use super::{check_tokens, parse_tokens};
+    use super::*;
 
     #[test]
     fn test_parsing() -> Result<(), Error> {
@@ -250,25 +248,25 @@ mod tests {
         ];
         let actual_res2 = super::parse_tokens("1 -5 *-(|-37|*4.8)+5 %99/7")?;
         let expected_res2 = vec![
-            Token::from(Fraction::from(1)),
+            Token::parse_num("1")?,
             Token::from(BinaryOp::Sub),
-            Token::from(Fraction::from(5)),
+            Token::parse_num("5")?,
             Token::from(BinaryOp::Mul),
             Token::from(UnaryOp::Neg),
             Token::from(StartBlock::Bracket),
             Token::from(StartBlock::Abs),
             Token::from(UnaryOp::Neg),
-            Token::from(Fraction::from(37)),
+            Token::parse_num("37")?,
             Token::from(EndBlock::Abs),
             Token::from(BinaryOp::Mul),
-            Token::from(Fraction::from_str("4.8").unwrap()),
+            Token::parse_num("4.8")?,
             Token::from(EndBlock::Bracket),
             Token::from(BinaryOp::Add),
-            Token::from(Fraction::from(5)),
+            Token::parse_num("5")?,
             Token::from(BinaryOp::Mod),
-            Token::from(Fraction::from(99)),
+            Token::parse_num("99")?,
             Token::from(BinaryOp::Div),
-            Token::from(Fraction::from(7)),
+            Token::parse_num("7")?,
         ];
         assert_eq!(expected_res1, actual_res1);
         assert_eq!(expected_res2, actual_res2);

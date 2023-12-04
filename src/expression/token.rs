@@ -1,6 +1,6 @@
 #![allow(dead_code, unused)]
 
-use crate::*;
+use super::error::{Error, ParseErr};
 use fraction::Fraction;
 use std::{fmt::Display, mem, str::FromStr};
 
