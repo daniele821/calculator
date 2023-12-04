@@ -165,6 +165,13 @@ impl Token {
         Ok(Token::Number(num))
     }
 
+    pub fn num(&self) -> Option<&Fraction> {
+        match self {
+            Token::Number(num) => Some(num),
+            _ => None,
+        }
+    }
+
     pub fn priority(&self) -> usize {
         match self {
             Token::StartBlock(_) => 0,
