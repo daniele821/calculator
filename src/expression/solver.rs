@@ -229,56 +229,62 @@ fn check_rules(tokens: &[Token], checks: &[CheckRules]) -> Result<(), Error> {
 }
 
 pub fn solve(tokens: &mut Vec<Token>) -> Result<Fraction, Error> {
-    loop {
-        let index = next_operation(tokens);
-        if let Some(index) = index {
-            let token = &tokens[index];
-            let mut nums = Vec::<&Fraction>::new();
-            let from: usize;
-            let to: usize;
-            match TokenType::from(token) {
-                STA => {
-                    nums.push(tokens[index + 1].num().unwrap());
-                    from = index;
-                    to = index + 2;
-                }
-                UNA => {
-                    nums.push(tokens[index + 1].num().unwrap());
-                    from = index;
-                    to = index + 1;
-                }
-                BIN => {
-                    nums.push(tokens[index - 1].num().unwrap());
-                    nums.push(tokens[index + 1].num().unwrap());
-                    from = index - 1;
-                    to = index + 1;
-                }
-                _ => unreachable!(),
+    while solve_one_op(tokens) {}
+    get_result(tokens)
+}
+
+pub fn solve_one_op(tokens: &mut Vec<Token>) -> bool {
+    let index = next_operation(tokens);
+    if let Some(index) = index {
+        let token = &tokens[index];
+        let mut nums = Vec::<&Fraction>::new();
+        let from: usize;
+        let to: usize;
+        match TokenType::from(token) {
+            STA => {
+                nums.push(tokens[index + 1].num().unwrap());
+                from = index;
+                to = index + 2;
             }
-            let num: Fraction = match token {
-                Token::StartBlock(start) => match start {
-                    StartBlock::Bracket => *nums[0],
-                    StartBlock::Abs => nums[0].abs(),
-                },
-                Token::UnaryOperator(unary) => match unary {
-                    UnaryOp::Neg => nums[0].neg(),
-                    UnaryOp::Pos => *nums[0],
-                },
-                Token::BinaryOperator(bin) => match bin {
-                    BinaryOp::Add => nums[0] + nums[1],
-                    BinaryOp::Sub => nums[0] - nums[1],
-                    BinaryOp::Mul => nums[0] * nums[1],
-                    BinaryOp::Mod => nums[0] % nums[1],
-                    BinaryOp::Div => nums[0] / nums[1],
-                },
-                _ => unreachable!(),
-            };
-            tokens.drain(from..=to);
-            tokens.insert(from, Token::Number(num));
-        } else {
-            break;
+            UNA => {
+                nums.push(tokens[index + 1].num().unwrap());
+                from = index;
+                to = index + 1;
+            }
+            BIN => {
+                nums.push(tokens[index - 1].num().unwrap());
+                nums.push(tokens[index + 1].num().unwrap());
+                from = index - 1;
+                to = index + 1;
+            }
+            _ => unreachable!(),
         }
+        let num: Fraction = match token {
+            Token::StartBlock(start) => match start {
+                StartBlock::Bracket => *nums[0],
+                StartBlock::Abs => nums[0].abs(),
+            },
+            Token::UnaryOperator(unary) => match unary {
+                UnaryOp::Neg => nums[0].neg(),
+                UnaryOp::Pos => *nums[0],
+            },
+            Token::BinaryOperator(bin) => match bin {
+                BinaryOp::Add => nums[0] + nums[1],
+                BinaryOp::Sub => nums[0] - nums[1],
+                BinaryOp::Mul => nums[0] * nums[1],
+                BinaryOp::Mod => nums[0] % nums[1],
+                BinaryOp::Div => nums[0] / nums[1],
+            },
+            _ => unreachable!(),
+        };
+        tokens.drain(from..=to);
+        tokens.insert(from, Token::Number(num));
+        return true;
     }
+    false
+}
+
+pub fn get_result(tokens: &[Token]) -> Result<Fraction, Error> {
     assert_eq!(tokens.len(), 1);
     let res = tokens.first().unwrap().num().unwrap();
     if !res.is_finite() {
