@@ -7,16 +7,17 @@ use crate::{
         token::{BinaryOp, EndBlock, StartBlock, Token, TokenType, UnaryOp},
     },
 };
+use fraction::Fraction;
 
-const STA: &TokenType = &TokenType::StartBlock;
-const END: &TokenType = &TokenType::EndBlock;
-const UNA: &TokenType = &TokenType::UnaryOperator;
-const BIN: &TokenType = &TokenType::BinaryOperator;
-const NUM: &TokenType = &TokenType::Number;
-const POS: &Token = &Token::UnaryOperator(UnaryOp::Pos);
-const NEG: &Token = &Token::UnaryOperator(UnaryOp::Neg);
-const ADD: &Token = &Token::BinaryOperator(BinaryOp::Add);
-const SUB: &Token = &Token::BinaryOperator(BinaryOp::Sub);
+const STA: TokenType = TokenType::StartBlock;
+const END: TokenType = TokenType::EndBlock;
+const UNA: TokenType = TokenType::UnaryOperator;
+const BIN: TokenType = TokenType::BinaryOperator;
+const NUM: TokenType = TokenType::Number;
+const POS: Token = Token::UnaryOperator(UnaryOp::Pos);
+const NEG: Token = Token::UnaryOperator(UnaryOp::Neg);
+const ADD: Token = Token::BinaryOperator(BinaryOp::Add);
+const SUB: Token = Token::BinaryOperator(BinaryOp::Sub);
 
 #[derive(Debug, Clone, Eq, PartialEq)]
 pub enum FixRules {
@@ -129,7 +130,7 @@ fn fix_tokens(tokens: &mut Vec<Token>, rules: &[FixRules]) {
         let rule1_pos = tokens
             .windows(2)
             .enumerate()
-            .filter_map(|(i, w)| (w[0].eq_tokentype(END) && w[1].eq_tokentype(STA)).then_some(i))
+            .filter_map(|(i, w)| (w[0].eq_tokentype(&END) && w[1].eq_tokentype(&STA)).then_some(i))
             .rev()
             .collect::<Vec<_>>();
         for pos in rule1_pos {
@@ -170,15 +171,15 @@ fn check_tokens(tokens: &[Token], checks: &[CheckRules]) -> Result<(), Error> {
         token_stack.push(TokenType::from(token));
         loop {
             let len = token_stack.len();
-            if check_token(&mut token_stack, &[NUM, BIN, NUM], false) {
+            if check_token(&mut token_stack, &[&NUM, &BIN, &NUM], false) {
                 token_stack.drain(len - 2..=len - 1);
                 continue;
             }
-            if check_token(&mut token_stack, &[UNA, NUM], false) {
+            if check_token(&mut token_stack, &[&UNA, &NUM], false) {
                 token_stack.remove(len - 2);
                 continue;
             }
-            if check_token(&mut token_stack, &[STA, NUM, END], false) {
+            if check_token(&mut token_stack, &[&STA, &NUM, &END], false) {
                 token_stack.remove(len - 1);
                 token_stack.remove(len - 3);
                 continue;
@@ -193,7 +194,7 @@ fn check_tokens(tokens: &[Token], checks: &[CheckRules]) -> Result<(), Error> {
         Err(CheckErr::UnbalancedBlocks(block_stack))?
     }
     // errors for expression collapsion
-    if token_stack.len() != 1 || token_stack.first() != Some(&TokenType::Number) {
+    if token_stack.len() != 1 || token_stack.first() != Some(&NUM) {
         Err(CheckErr::ExprWithNoResult(token_stack))?
     }
 
@@ -219,15 +220,59 @@ fn check_rules(tokens: &[Token], checks: &[CheckRules]) -> Result<(), Error> {
     let all_sign = checks.contains(&CheckRules::DenyAllMultipleSign);
 
     for pair in tokens.windows(2) {
-        if all_sign && [POS, NEG, ADD, SUB].contains(&&pair[0]) && [POS, NEG].contains(&&pair[1]) {
+        if all_sign && [POS, NEG, ADD, SUB].contains(&pair[0]) && [POS, NEG].contains(&pair[1]) {
             Err(CheckErr::InvalidAdiacents(pair.to_vec()))?;
         }
-        if mul_sign && [POS, NEG].contains(&&pair[0]) && [POS, NEG].contains(&&pair[1]) {
+        if mul_sign && [POS, NEG].contains(&pair[0]) && [POS, NEG].contains(&pair[1]) {
             Err(CheckErr::InvalidAdiacents(pair.to_vec()))?;
         }
     }
 
     Ok(())
+}
+
+pub fn solve(tokens: &mut Vec<Token>) -> Result<Fraction, Error> {
+    loop {
+        let index = next_operation(tokens);
+        if let Some(index) = index {
+            let token = &tokens[index];
+            match TokenType::from(token) {
+                STA => todo!("start block"),
+                UNA => todo!("unary operation"),
+                BIN => todo!("binary operation"),
+                _ => unreachable!(),
+            }
+        } else {
+            break;
+        }
+    }
+    todo!()
+}
+
+fn next_operation(tokens: &[Token]) -> Option<usize> {
+    let mut op_index = None::<usize>;
+    let mut op_priority = usize::MAX;
+    for (index, token) in tokens.iter().enumerate() {
+        if token.priority() < op_priority {
+            let before1 = tokens.get(index.saturating_sub(1)).map(TokenType::from);
+            let current = tokens.get(index).map(TokenType::from);
+            let after1 = tokens.get(index + 1).map(TokenType::from);
+            let after2 = tokens.get(index + 2).map(TokenType::from);
+            match (before1, current, after1, after2) {
+                (Some(NUM), Some(BIN), Some(NUM), _)
+                | (_, Some(STA), Some(NUM), Some(END))
+                | (_, Some(UNA), Some(NUM), _) => {
+                    op_index = Some(index);
+                    op_priority = token.priority();
+                }
+                _ => (),
+            }
+        }
+        if op_priority == 0 {
+            break;
+        }
+    }
+    op_index
 }
 
 #[cfg(test)]
@@ -236,7 +281,7 @@ mod tests {
 
     #[test]
     fn test_parsing() -> Result<(), Error> {
-        let actual_res1 = super::parse_tokens("(||||)()")?;
+        let actual_res1 = parse_tokens("(||||)()")?;
         let expected_res1 = vec![
             Token::from(StartBlock::Bracket),
             Token::from(StartBlock::Abs),
@@ -247,7 +292,7 @@ mod tests {
             Token::from(StartBlock::Bracket),
             Token::from(EndBlock::Bracket),
         ];
-        let actual_res2 = super::parse_tokens("1 -5 *-(|-37|*4.8)+5 %99/7")?;
+        let actual_res2 = parse_tokens("1 -5 *-(|-37|*4.8)+5 %99/7")?;
         let expected_res2 = vec![
             Token::parse_num("1")?,
             Token::from(BinaryOp::Sub),
@@ -278,8 +323,8 @@ mod tests {
     fn test_fix() -> Result<(), Error> {
         let rule1 = &[FixRules::BlockProduct];
         let rule2 = &[FixRules::CloseBlocks];
-        let mut actual_tokens_rule1 = super::parse_tokens("()(())||")?;
-        super::fix_tokens(&mut actual_tokens_rule1, rule1);
+        let mut actual_tokens_rule1 = parse_tokens("()(())||")?;
+        fix_tokens(&mut actual_tokens_rule1, rule1);
         let expected_tokens_rule1 = vec![
             Token::from(StartBlock::Bracket),
             Token::from(EndBlock::Bracket),
@@ -292,8 +337,8 @@ mod tests {
             Token::from(StartBlock::Abs),
             Token::from(EndBlock::Abs),
         ];
-        let mut actual_tokens_rule2 = super::parse_tokens("(|(")?;
-        super::fix_tokens(&mut actual_tokens_rule2, rule2);
+        let mut actual_tokens_rule2 = parse_tokens("(|(")?;
+        fix_tokens(&mut actual_tokens_rule2, rule2);
         let expected_tokens_rule2 = vec![
             Token::from(StartBlock::Bracket),
             Token::from(StartBlock::Abs),
@@ -313,18 +358,38 @@ mod tests {
     fn test_check() -> Result<(), Error> {
         let rule1 = &[CheckRules::DenyMultipleSign];
         let rule2 = &[CheckRules::DenyAllMultipleSign];
-        let valid1 = super::check_tokens(&super::parse_tokens("-+3.8*(1+|7|*-(5+|-1|))")?, &[]);
-        let invalid1 = super::check_tokens(&super::parse_tokens("13*()+9")?, &[]);
-        let test_rule1_ok = super::check_tokens(&super::parse_tokens("-3++5+-1-+4--2")?, rule1);
-        let test_rule1_err = super::check_tokens(&super::parse_tokens("--5")?, rule1);
-        let test_rule2_ok = super::check_tokens(&super::parse_tokens("-3+5")?, rule2);
-        let test_rule2_err = super::check_tokens(&super::parse_tokens("4--5")?, rule2);
+        let valid1 = check_tokens(&parse_tokens("-+3.8*(1+|7|*-(5+|-1|))")?, &[]);
+        let invalid1 = check_tokens(&parse_tokens("13*()+9")?, &[]);
+        let test_rule1_ok = check_tokens(&parse_tokens("-3++5+-1-+4--2")?, rule1);
+        let test_rule1_err = check_tokens(&parse_tokens("--5")?, rule1);
+        let test_rule2_ok = check_tokens(&parse_tokens("-3+5")?, rule2);
+        let test_rule2_err = check_tokens(&parse_tokens("4--5")?, rule2);
         assert!(valid1.is_ok());
         assert!(invalid1.is_err());
         assert!(test_rule1_ok.is_ok());
         assert!(test_rule1_err.is_err());
         assert!(test_rule2_ok.is_ok());
         assert!(test_rule2_err.is_err());
+        Ok(())
+    }
+
+    #[test]
+    fn test_next_op() -> Result<(), Error> {
+        let expr1 = parse("12+34*45", FixRules::DEF, CheckRules::DEF)?;
+        let expr2 = parse("12+(12)", FixRules::DEF, CheckRules::DEF)?;
+        let expr3 = parse("12+(12/34)", FixRules::DEF, CheckRules::DEF)?;
+        assert_eq!(next_operation(&expr1), Some(3));
+        assert_eq!(next_operation(&expr2), Some(2));
+        assert_eq!(next_operation(&expr3), Some(4));
+        Ok(())
+    }
+
+    #[test]
+    fn test_solve() -> Result<(), Error> {
+        let mut expr1 = parse("12+34*45", FixRules::DEF, CheckRules::DEF)?;
+        let mut expr2 = parse("-|-12|+34*45", FixRules::DEF, CheckRules::DEF)?;
+        assert_eq!(solve(&mut expr1)?, Fraction::from(1542));
+        assert_eq!(solve(&mut expr2)?, Fraction::from(1518));
         Ok(())
     }
 }

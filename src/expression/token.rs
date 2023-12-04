@@ -168,13 +168,12 @@ impl Token {
     pub fn priority(&self) -> usize {
         match self {
             Token::StartBlock(_) => 0,
-            Token::EndBlock(_) => 1,
-            Token::UnaryOperator(_) => 2,
+            Token::UnaryOperator(_) => 1,
             Token::BinaryOperator(op) => match op {
-                BinaryOp::Mul | BinaryOp::Mod | BinaryOp::Div => 3,
-                BinaryOp::Add | BinaryOp::Sub => 4,
+                BinaryOp::Mul | BinaryOp::Mod | BinaryOp::Div => 2,
+                BinaryOp::Add | BinaryOp::Sub => 3,
             },
-            Token::Number(_) => 5,
+            _ => usize::MAX,
         }
     }
 

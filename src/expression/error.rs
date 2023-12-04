@@ -1,5 +1,7 @@
 #![allow(dead_code, unused)]
 
+use fraction::Fraction;
+
 use super::token::{Token, TokenType};
 
 #[derive(Debug, Clone, Eq, PartialEq)]
@@ -23,7 +25,9 @@ pub enum CheckErr {
 }
 
 #[derive(Debug, Clone, Eq, PartialEq)]
-pub enum SolveErr {}
+pub enum SolveErr {
+    NotRationalNumber(Fraction),
+}
 
 impl From<ParseErr> for Error {
     fn from(value: ParseErr) -> Self {
