@@ -1,10 +1,22 @@
 #![allow(dead_code, unused)]
 
-use super::{
-    error::{CheckErr, Error, ParseErr},
-    token::{BinaryOp, EndBlock, StartBlock, Token, TokenType, UnaryOp},
+use crate::{
+    common,
+    expression::{
+        error::{CheckErr, Error, ParseErr},
+        token::{BinaryOp, EndBlock, StartBlock, Token, TokenType, UnaryOp},
+    },
 };
-use crate::common;
+
+const STA: &TokenType = &TokenType::StartBlock;
+const END: &TokenType = &TokenType::EndBlock;
+const UNA: &TokenType = &TokenType::UnaryOperator;
+const BIN: &TokenType = &TokenType::BinaryOperator;
+const NUM: &TokenType = &TokenType::Number;
+const POS: &Token = &Token::UnaryOperator(UnaryOp::Pos);
+const NEG: &Token = &Token::UnaryOperator(UnaryOp::Neg);
+const ADD: &Token = &Token::BinaryOperator(BinaryOp::Add);
+const SUB: &Token = &Token::BinaryOperator(BinaryOp::Sub);
 
 #[derive(Debug, Clone, Eq, PartialEq)]
 pub enum FixRules {
@@ -14,6 +26,8 @@ pub enum FixRules {
     CloseBlocks,
 }
 impl FixRules {
+    pub const DEF: &'static [Self] = &[FixRules::BlockProduct, FixRules::CloseBlocks];
+
     pub fn all() -> Vec<Self> {
         vec![FixRules::BlockProduct, FixRules::CloseBlocks]
     }
@@ -27,6 +41,8 @@ pub enum CheckRules {
     DenyAllMultipleSign,
 }
 impl CheckRules {
+    pub const DEF: &'static [Self] = &[CheckRules::DenyMultipleSign];
+
     pub fn all() -> Vec<Self> {
         vec![
             CheckRules::DenyMultipleSign,
@@ -109,15 +125,12 @@ fn parse_tokens(str: &str) -> Result<Vec<Token>, Error> {
 }
 
 fn fix_tokens(tokens: &mut Vec<Token>, rules: &[FixRules]) {
-    const END: &TokenType = &TokenType::EndBlock;
-    const START: &TokenType = &TokenType::StartBlock;
-
     if rules.contains(&FixRules::BlockProduct) {
         let rule1_pos = tokens
             .iter()
             .enumerate()
             .filter(|(_, t)| t.eq_tokentype(END))
-            .filter(|(i, _)| tokens.get(i + 1).map(|t| t.eq_tokentype(START)) == Some(true))
+            .filter(|(i, _)| tokens.get(i + 1).map(|t| t.eq_tokentype(STA)) == Some(true))
             .map(|(i, _)| i)
             .rev()
             .collect::<Vec<_>>();
@@ -142,11 +155,6 @@ fn fix_tokens(tokens: &mut Vec<Token>, rules: &[FixRules]) {
 }
 
 fn check_tokens(tokens: &[Token], checks: &[CheckRules]) -> Result<(), Error> {
-    const NUM: &TokenType = &TokenType::Number;
-    const STA: &TokenType = &TokenType::StartBlock;
-    const END: &TokenType = &TokenType::EndBlock;
-    const BIN: &TokenType = &TokenType::BinaryOperator;
-    const UNA: &TokenType = &TokenType::UnaryOperator;
     let mut block_stack = Vec::<StartBlock>::new();
     let mut token_stack = Vec::<TokenType>::new();
 
@@ -209,11 +217,6 @@ fn check_token(stack: &mut Vec<TokenType>, elems: &[&TokenType], strictly_eq: bo
 }
 
 fn check_rules(tokens: &[Token], checks: &[CheckRules]) -> Result<(), Error> {
-    const POS: &Token = &Token::UnaryOperator(UnaryOp::Pos);
-    const NEG: &Token = &Token::UnaryOperator(UnaryOp::Neg);
-    const ADD: &Token = &Token::BinaryOperator(BinaryOp::Add);
-    const SUB: &Token = &Token::BinaryOperator(BinaryOp::Sub);
-
     let mul_sign = checks.contains(&CheckRules::DenyMultipleSign);
     let all_sign = checks.contains(&CheckRules::DenyAllMultipleSign);
 
