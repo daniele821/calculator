@@ -1,6 +1,6 @@
 #![allow(dead_code, unused)]
 
-use super::token::{Token, TokenType};
+use crate::*;
 
 #[derive(Debug, Clone, Eq, PartialEq)]
 pub enum Error {

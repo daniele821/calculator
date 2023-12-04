@@ -1,11 +1,8 @@
 #![allow(dead_code, unused)]
 
+use crate::*;
 use fraction::Fraction;
 use std::{fmt::Display, mem, str::FromStr};
-
-use crate::expression::types::error::ParseErr;
-
-use super::error::Error;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Token {

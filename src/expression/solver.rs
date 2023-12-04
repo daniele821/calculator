@@ -1,11 +1,6 @@
 #![allow(dead_code, unused)]
 
-use crate::common::convert;
-
-use super::types::{
-    error::{CheckErr, Error, ParseErr},
-    token::{BinaryOp, EndBlock, StartBlock, Token, TokenType, UnaryOp},
-};
+use crate::*;
 use fraction::{Fraction, Zero};
 use std::{io::Write, str::FromStr};
 
@@ -234,10 +229,7 @@ pub fn check_rules(tokens: &[Token], checks: &[CheckRules]) -> Result<(), Error>
 
 #[cfg(test)]
 mod tests {
-    use crate::expression::{
-        solver::*,
-        types::{error::*, token::*},
-    };
+    use crate::*;
     use fraction::Fraction;
     use std::str::FromStr;
 
