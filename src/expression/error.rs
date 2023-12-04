@@ -1,6 +1,10 @@
 #![allow(dead_code, unused)]
 
+use std::fmt::Display;
+
 use fraction::Fraction;
+
+use crate::common;
 
 use super::token::{Token, TokenType};
 
@@ -45,5 +49,55 @@ impl From<CheckErr> for Error {
 impl From<SolveErr> for Error {
     fn from(value: SolveErr) -> Self {
         Self::Solve(value)
+    }
+}
+
+impl Display for SolveErr {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let err = match self {
+            SolveErr::NotRationalNumber(num) => format!("not a rational number '{num}'"),
+            SolveErr::OperIllegalValues(tokens) => {
+                format!("invalid operation '{}'", common::fmt(tokens, None))
+            }
+        };
+        write!(f, "{err}")
+    }
+}
+
+impl Display for ParseErr {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let err = match self {
+            ParseErr::InvalidNumber(num) => format!("invalid number '{num}'"),
+            ParseErr::InvalidToken(tok) => format!("invalid token '{tok}'"),
+        };
+        write!(f, "{err}")
+    }
+}
+
+impl Display for CheckErr {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let err = match self {
+            CheckErr::UnbalancedBlocks(blocks) => {
+                format!("unbalanced blocks '{}'", common::fmt(blocks, None))
+            }
+            CheckErr::ExprWithNoResult(res) => {
+                format!("expression has no result '{}'", common::fmt_dbg(res, None))
+            }
+            CheckErr::InvalidAdiacents(adj) => {
+                format!("invalid adiacents '{}'", common::fmt(adj, None))
+            }
+        };
+        write!(f, "{err}")
+    }
+}
+
+impl Display for Error {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let err = match self {
+            Error::Parse(err) => format!("ParseErr: {err}"),
+            Error::Check(err) => format!("CheckErr: {err}"),
+            Error::Solve(err) => format!("SolveErr: {err}"),
+        };
+        write!(f, "{err}")
     }
 }
