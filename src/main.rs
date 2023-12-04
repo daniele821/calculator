@@ -1,14 +1,20 @@
 use std::env;
 
-use calculator::expression::{
-    error::Error,
-    solver::{self, FixRules},
+use calculator::{
+    common,
+    expression::{
+        error::Error,
+        solver::{self, FixRules},
+    },
 };
 
 fn main() -> Result<(), Error> {
     let args = env::args().skip(1).collect::<Vec<_>>().join(" ");
     let mut tokens = solver::parse(&args, &FixRules::all(), &[])?;
-    let result = solver::solve(&mut tokens)?;
-    println!("Solution: {result}");
+    println!("{}", common::fmt(&tokens, None));
+    while solver::solve_one_op(&mut tokens) {
+        println!("{}", common::fmt(&tokens, None));
+    }
+    solver::get_result(&tokens)?;
     Ok(())
 }
