@@ -28,8 +28,6 @@ pub enum FixRules {
     CloseBlocks,
 }
 impl FixRules {
-    pub const DEF: &'static [Self] = &[FixRules::BlockProduct, FixRules::CloseBlocks];
-
     pub fn all() -> Vec<Self> {
         vec![FixRules::BlockProduct, FixRules::CloseBlocks]
     }
@@ -43,8 +41,6 @@ pub enum CheckRules {
     DenyAllMultipleSign,
 }
 impl CheckRules {
-    pub const DEF: &'static [Self] = &[CheckRules::DenyMultipleSign];
-
     pub fn all() -> Vec<Self> {
         vec![
             CheckRules::DenyMultipleSign,
@@ -417,9 +413,9 @@ mod tests {
 
     #[test]
     fn test_next_op() -> Result<(), Error> {
-        let expr1 = parse("12+34*45", FixRules::DEF, CheckRules::DEF)?;
-        let expr2 = parse("12+(12)", FixRules::DEF, CheckRules::DEF)?;
-        let expr3 = parse("12+(12/34)", FixRules::DEF, CheckRules::DEF)?;
+        let expr1 = parse("12+34*45", &FixRules::all(), &CheckRules::all())?;
+        let expr2 = parse("12+(12)", &FixRules::all(), &CheckRules::all())?;
+        let expr3 = parse("12+(12/34)", &FixRules::all(), &CheckRules::all())?;
         assert_eq!(next_operation(&expr1), Some(3));
         assert_eq!(next_operation(&expr2), Some(2));
         assert_eq!(next_operation(&expr3), Some(4));
@@ -428,8 +424,8 @@ mod tests {
 
     #[test]
     fn test_solve() -> Result<(), Error> {
-        let mut expr1 = parse("12+34*45", FixRules::DEF, CheckRules::DEF)?;
-        let mut expr2 = parse("-|-12|+34*45", FixRules::DEF, CheckRules::DEF)?;
+        let mut expr1 = parse("12+34*45", &FixRules::all(), &CheckRules::all())?;
+        let mut expr2 = parse("-|-12|+34*45", &FixRules::all(), &CheckRules::all())?;
         assert_eq!(solve(&mut expr1)?, Fraction::from(1542));
         assert_eq!(solve(&mut expr2)?, Fraction::from(1518));
         Ok(())
