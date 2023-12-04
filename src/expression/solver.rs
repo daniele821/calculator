@@ -127,11 +127,9 @@ fn parse_tokens(str: &str) -> Result<Vec<Token>, Error> {
 fn fix_tokens(tokens: &mut Vec<Token>, rules: &[FixRules]) {
     if rules.contains(&FixRules::BlockProduct) {
         let rule1_pos = tokens
-            .iter()
+            .windows(2)
             .enumerate()
-            .filter(|(_, t)| t.eq_tokentype(END))
-            .filter(|(i, _)| tokens.get(i + 1).map(|t| t.eq_tokentype(STA)) == Some(true))
-            .map(|(i, _)| i)
+            .filter_map(|(i, w)| (w[0].eq_tokentype(END) && w[1].eq_tokentype(STA)).then_some(i))
             .rev()
             .collect::<Vec<_>>();
         for pos in rule1_pos {
