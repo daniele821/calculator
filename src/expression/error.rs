@@ -1,6 +1,9 @@
 #![allow(dead_code, unused)]
 
-use super::token::{Token, TokenType};
+use super::{
+    solver::CheckRules,
+    token::{Token, TokenType},
+};
 use crate::common;
 use std::fmt::Display;
 
@@ -21,7 +24,7 @@ pub enum ParseErr {
 pub enum CheckErr {
     UnbalancedBlocks(Vec<Token>),
     ExprWithNoResult(Vec<TokenType>),
-    InvalidAdiacents(Vec<Token>),
+    BrokenCheckRule(Vec<Token>, CheckRules),
 }
 
 #[derive(Debug, Clone, Eq, PartialEq)]
@@ -77,8 +80,8 @@ impl Display for CheckErr {
             CheckErr::ExprWithNoResult(res) => {
                 format!("expression has no result '{}'", common::fmt(res, None))
             }
-            CheckErr::InvalidAdiacents(adj) => {
-                format!("invalid adiacents '{}'", common::fmt(adj, None))
+            CheckErr::BrokenCheckRule(a, r) => {
+                format!("broken check rule '{r:?}', with '{}'", common::fmt(a, None))
             }
         };
         write!(f, "{err}")

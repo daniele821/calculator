@@ -19,6 +19,10 @@ const POS: Token = Token::UnaryOperator(UnaryOp::Pos);
 const NEG: Token = Token::UnaryOperator(UnaryOp::Neg);
 const ADD: Token = Token::BinaryOperator(BinaryOp::Add);
 const SUB: Token = Token::BinaryOperator(BinaryOp::Sub);
+const DENY_DIV: CheckRules = CheckRules::DenyDivision;
+const DENY_MOD: CheckRules = CheckRules::DenyModule;
+const DENY_MLS: CheckRules = CheckRules::DenyMultipleSign;
+const DENY_AMS: CheckRules = CheckRules::DenyAllMultipleSign;
 
 #[derive(Debug, Clone, Eq, PartialEq)]
 pub enum FixRules {
@@ -29,7 +33,7 @@ pub enum FixRules {
 }
 impl FixRules {
     pub fn all() -> Vec<Self> {
-        vec![FixRules::BlockProduct, FixRules::CloseBlocks]
+        vec![Self::BlockProduct, Self::CloseBlocks]
     }
 }
 
@@ -39,12 +43,18 @@ pub enum CheckRules {
     DenyMultipleSign,
     /// deny: "++expr", "-+-+expr++expr", "expr+-expr", "expr--expr"
     DenyAllMultipleSign,
+    /// deny: expr / expr
+    DenyDivision,
+    /// deny: expr % expr
+    DenyModule,
 }
 impl CheckRules {
     pub fn all() -> Vec<Self> {
         vec![
-            CheckRules::DenyMultipleSign,
-            CheckRules::DenyAllMultipleSign,
+            Self::DenyMultipleSign,
+            Self::DenyAllMultipleSign,
+            Self::DenyDivision,
+            Self::DenyDivision,
         ]
     }
 }
@@ -224,13 +234,23 @@ fn check_token(stack: &mut Vec<TokenType>, elems: &[&TokenType], strictly_eq: bo
 fn check_rules(tokens: &[Token], checks: &[CheckRules]) -> Result<(), Error> {
     let mul_sign = checks.contains(&CheckRules::DenyMultipleSign);
     let all_sign = checks.contains(&CheckRules::DenyAllMultipleSign);
+    let deny_div = checks.contains(&DENY_DIV);
+    let deny_mod = checks.contains(&DENY_MOD);
 
+    for token in tokens {
+        if deny_div && token == &Token::from(BinaryOp::Div) {
+            Err(CheckErr::BrokenCheckRule(vec![token.clone()], DENY_DIV))?;
+        }
+        if deny_mod && token == &Token::from(BinaryOp::Mod) {
+            Err(CheckErr::BrokenCheckRule(vec![token.clone()], DENY_MOD))?;
+        }
+    }
     for pair in tokens.windows(2) {
         if all_sign && [POS, NEG, ADD, SUB].contains(&pair[0]) && [POS, NEG].contains(&pair[1]) {
-            Err(CheckErr::InvalidAdiacents(pair.to_vec()))?;
+            Err(CheckErr::BrokenCheckRule(pair.to_vec(), DENY_AMS))?;
         }
         if mul_sign && [POS, NEG].contains(&pair[0]) && [POS, NEG].contains(&pair[1]) {
-            Err(CheckErr::InvalidAdiacents(pair.to_vec()))?;
+            Err(CheckErr::BrokenCheckRule(pair.to_vec(), DENY_MLS))?;
         }
     }
 
