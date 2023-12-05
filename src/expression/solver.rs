@@ -8,7 +8,7 @@ use crate::{
     },
 };
 use fraction::{Fraction, Zero};
-use std::ops::{Neg, Range, RangeBounds, RangeInclusive};
+use std::ops::{Div, Neg, Range, RangeBounds, RangeInclusive};
 
 const STA: TokenType = TokenType::StartBlock;
 const END: TokenType = TokenType::EndBlock;
@@ -272,18 +272,8 @@ pub fn solve_one_op(tokens: &mut Vec<Token>) -> Result<bool, Error> {
                 BinaryOp::Add => nums[0] + nums[1],
                 BinaryOp::Sub => nums[0] - nums[1],
                 BinaryOp::Mul => nums[0] * nums[1],
-                BinaryOp::Mod => nums[0] % nums[1],
-                BinaryOp::Div => {
-                    if nums[1].is_zero() {
-                        let vec = vec![
-                            Token::from(*nums[0]),
-                            Token::from(BinaryOp::Div),
-                            Token::from(*nums[1]),
-                        ];
-                        Err(SolveErr::OperIllegalValues(vec))?;
-                    }
-                    nums[0] / nums[1]
-                }
+                BinaryOp::Mod => calculate(&nums, bin)?,
+                BinaryOp::Div => calculate(&nums, bin)?,
             },
             _ => unreachable!(),
         };
@@ -304,6 +294,27 @@ pub fn get_result(tokens: &[Token]) -> Result<Fraction, Error> {
         Err(SolveErr::NotRationalNumber(*res))?;
     }
     Ok(*res)
+}
+
+fn calculate(nums: &[&Fraction], op: &BinaryOp) -> Result<Fraction, Error> {
+    match op {
+        BinaryOp::Mod | BinaryOp::Div => {
+            if nums[1].is_zero() {
+                let vec = vec![
+                    Token::from(*nums[0]),
+                    Token::from(op.clone()),
+                    Token::from(*nums[1]),
+                ];
+                Err(SolveErr::OperIllegalValues(vec))?;
+            }
+        }
+        _ => unreachable!(),
+    }
+    match op {
+        BinaryOp::Mod => Ok(nums[0] % nums[1]),
+        BinaryOp::Div => Ok(nums[0] / nums[1]),
+        _ => unreachable!(),
+    }
 }
 
 fn next_operation(tokens: &[Token]) -> Option<usize> {
