@@ -1,7 +1,7 @@
 #![allow(dead_code, unused)]
 
 use super::error::{Error, ParseErr};
-use fraction::Fraction;
+use fraction::{BigFraction, BigUint, GenericFraction};
 use std::{fmt::Display, mem, str::FromStr};
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -10,7 +10,7 @@ pub enum Token {
     EndBlock(EndBlock),
     UnaryOperator(UnaryOp),
     BinaryOperator(BinaryOp),
-    Number(Fraction),
+    Number(BigFraction),
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -73,8 +73,8 @@ impl From<BinaryOp> for Token {
     }
 }
 
-impl From<Fraction> for Token {
-    fn from(value: Fraction) -> Self {
+impl From<BigFraction> for Token {
+    fn from(value: BigFraction) -> Self {
         Token::Number(value)
     }
 }
@@ -167,11 +167,11 @@ impl Ord for Token {
 
 impl Token {
     pub fn parse_num(str: &str) -> Result<Self, Error> {
-        let num = Fraction::from_str(str).or(Err(ParseErr::InvalidNumber(str.to_string())))?;
+        let num = BigFraction::from_str(str).or(Err(ParseErr::InvalidNumber(str.to_string())))?;
         Ok(Token::Number(num))
     }
 
-    pub fn num(&self) -> Option<&Fraction> {
+    pub fn num(&self) -> Option<&BigFraction> {
         match self {
             Token::Number(num) => Some(num),
             _ => None,

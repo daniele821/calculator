@@ -1,12 +1,8 @@
 #![allow(dead_code, unused)]
 
-use std::fmt::Display;
-
-use fraction::Fraction;
-
-use crate::common;
-
 use super::token::{Token, TokenType};
+use crate::common;
+use std::fmt::Display;
 
 #[derive(Debug, Clone, Eq, PartialEq)]
 pub enum Error {

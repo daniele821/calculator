@@ -7,7 +7,7 @@ use crate::{
         token::{BinaryOp, EndBlock, StartBlock, Token, TokenType, UnaryOp},
     },
 };
-use fraction::{Fraction, Zero};
+use fraction::{BigFraction, Zero};
 use std::ops::{Div, Neg, Range, RangeBounds, RangeInclusive};
 
 const STA: TokenType = TokenType::StartBlock;
@@ -53,7 +53,7 @@ pub fn resolve(
     fixes: &[FixRules],
     checks: &[CheckRules],
     explain: bool,
-) -> Result<Fraction, Error> {
+) -> Result<BigFraction, Error> {
     let mut tokens = parse(str, fixes, checks)?;
     solve(&mut tokens, explain)
 }
@@ -237,7 +237,7 @@ fn check_rules(tokens: &[Token], checks: &[CheckRules]) -> Result<(), Error> {
     Ok(())
 }
 
-pub fn solve(tokens: &mut Vec<Token>, explain: bool) -> Result<Fraction, Error> {
+pub fn solve(tokens: &mut Vec<Token>, explain: bool) -> Result<BigFraction, Error> {
     if explain {
         let title = common::color(&Color::TIT, "Explanation:");
         println!("{title}\n{}", common::fmt(tokens, None));
@@ -254,7 +254,7 @@ pub fn solve_one_op(tokens: &mut Vec<Token>) -> Result<bool, Error> {
     let index = next_operation(tokens);
     if let Some(index) = index {
         let token = &tokens[index];
-        let mut nums = Vec::<&Fraction>::new();
+        let mut nums = Vec::<&BigFraction>::new();
         let from: usize;
         let to: usize;
         match TokenType::from(token) {
@@ -276,14 +276,14 @@ pub fn solve_one_op(tokens: &mut Vec<Token>) -> Result<bool, Error> {
             }
             _ => unreachable!(),
         }
-        let num: Fraction = match token {
+        let num = match token {
             Token::StartBlock(start) => match start {
-                StartBlock::Bracket => *nums[0],
+                StartBlock::Bracket => nums[0].clone(),
                 StartBlock::Abs => nums[0].abs(),
             },
             Token::UnaryOperator(unary) => match unary {
                 UnaryOp::Neg => nums[0].neg(),
-                UnaryOp::Pos => *nums[0],
+                UnaryOp::Pos => nums[0].clone(),
             },
             Token::BinaryOperator(bin) => match bin {
                 BinaryOp::Add => nums[0] + nums[1],
@@ -304,23 +304,23 @@ pub fn solve_one_op(tokens: &mut Vec<Token>) -> Result<bool, Error> {
     Ok(false)
 }
 
-pub fn get_result(tokens: &[Token]) -> Result<Fraction, Error> {
+pub fn get_result(tokens: &[Token]) -> Result<BigFraction, Error> {
     assert_eq!(tokens.len(), 1);
     let res = tokens.first().unwrap().num().unwrap();
     if res.is_nan() || res.is_infinite() {
         panic!("number is not rational!");
     }
-    Ok(*res)
+    Ok(res.clone())
 }
 
-fn calculate(nums: &[&Fraction], op: &BinaryOp) -> Result<Fraction, Error> {
+fn calculate(nums: &[&BigFraction], op: &BinaryOp) -> Result<BigFraction, Error> {
     match op {
         BinaryOp::Mod | BinaryOp::Div => {
             if nums[1].is_zero() {
                 let vec = vec![
-                    Token::from(*nums[0]),
+                    Token::from(nums[0].clone()),
                     Token::from(op.clone()),
-                    Token::from(*nums[1]),
+                    Token::from(nums[1].clone()),
                 ];
                 Err(SolveErr::OperIllegalValues(vec))?;
             }
@@ -473,8 +473,8 @@ mod tests {
     fn test_solve() -> Result<(), Error> {
         let mut expr1 = parse("12+34*45", &FixRules::all(), &CheckRules::all())?;
         let mut expr2 = parse("-|-12|+34*45", &FixRules::all(), &CheckRules::all())?;
-        assert_eq!(solve(&mut expr1, false)?, Fraction::from(1542));
-        assert_eq!(solve(&mut expr2, false)?, Fraction::from(1518));
+        assert_eq!(solve(&mut expr1, false)?, BigFraction::from(1542));
+        assert_eq!(solve(&mut expr2, false)?, BigFraction::from(1518));
         Ok(())
     }
 }
