@@ -12,8 +12,8 @@ use fraction::Fraction;
 fn main() {
     let res = run();
     match res {
-        Ok(res) => println!("Solution: {res}"),
-        Err(err) => println!("{err}"),
+        Ok(res) => println!("\nSolution: {res}"),
+        Err(err) => println!("\n{err}"),
     }
 }
 
@@ -23,7 +23,7 @@ fn run() -> Result<Fraction, Error> {
     let mut tokens = solver::parse(&args, &FixRules::all(), &CheckRules::all())?;
     println!("{}", common::fmt(&tokens, None));
     while solver::solve_one_op(&mut tokens)? {
-        println!("{}\n", common::fmt(&tokens, None));
+        println!("{}", common::fmt(&tokens, None));
     }
     solver::get_result(&tokens)
 }

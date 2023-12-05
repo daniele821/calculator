@@ -30,7 +30,6 @@ pub enum CheckErr {
 
 #[derive(Debug, Clone, Eq, PartialEq)]
 pub enum SolveErr {
-    NotRationalNumber(Fraction),
     OperIllegalValues(Vec<Token>),
 }
 
@@ -55,7 +54,6 @@ impl From<SolveErr> for Error {
 impl Display for SolveErr {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let err = match self {
-            SolveErr::NotRationalNumber(num) => format!("not a rational number '{num}'"),
             SolveErr::OperIllegalValues(tokens) => {
                 format!("invalid operation '{}'", common::fmt(tokens, None))
             }

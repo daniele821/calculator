@@ -278,7 +278,7 @@ pub fn solve_one_op(tokens: &mut Vec<Token>) -> Result<bool, Error> {
             _ => unreachable!(),
         };
         if num.is_nan() || num.is_infinite() {
-            Err(SolveErr::NotRationalNumber(num))?;
+            panic!("number is not rational!");
         }
         tokens.drain(from..=to);
         tokens.insert(from, Token::Number(num));
@@ -291,7 +291,7 @@ pub fn get_result(tokens: &[Token]) -> Result<Fraction, Error> {
     assert_eq!(tokens.len(), 1);
     let res = tokens.first().unwrap().num().unwrap();
     if res.is_nan() || res.is_infinite() {
-        Err(SolveErr::NotRationalNumber(*res))?;
+        panic!("number is not rational!");
     }
     Ok(*res)
 }
