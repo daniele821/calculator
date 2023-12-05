@@ -4,7 +4,7 @@ use rustyline::{error::ReadlineError, DefaultEditor};
 
 use crate::{
     common::{self, Color},
-    expression::solver,
+    expression::solver::{self, FixRules},
 };
 
 pub fn run() {
@@ -15,12 +15,13 @@ pub fn run() {
             Ok(line) => {
                 rl.add_history_entry(line.as_str()).unwrap();
                 match &line[..] {
+                    "" => continue,
                     "exit" => break,
                     "clear" => {
                         Command::new("clear").spawn().unwrap().wait().unwrap();
                     }
                     "help" => println!("{}", help()),
-                    _ => match solver::resolve(&line, &[], &[], true) {
+                    _ => match solver::resolve(&line, &FixRules::all(), &[], true) {
                         Ok(res) => {
                             let title = common::color(&Color::TIT, "Solution:");
                             let res = common::color(&Color::SUC, &res);
