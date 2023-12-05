@@ -2,12 +2,15 @@ use std::process::Command;
 
 use rustyline::{error::ReadlineError, DefaultEditor};
 
-use crate::expression::solver;
+use crate::{
+    common::{self, Color},
+    expression::solver,
+};
 
 pub fn run() {
     let mut rl = DefaultEditor::new().unwrap();
     loop {
-        let readline = rl.readline("\x1b[92m>>>\x1b[0m ");
+        let readline = rl.readline(&common::color(&Color::OTH, ">>> "));
         match readline {
             Ok(line) => {
                 rl.add_history_entry(line.as_str()).unwrap();
@@ -18,8 +21,16 @@ pub fn run() {
                     }
                     "help" => println!("{}", help()),
                     _ => match solver::resolve(&line, &[], &[], true) {
-                        Ok(res) => println!("\nSolution: {res}\n"),
-                        Err(err) => println!("\n{err}\n"),
+                        Ok(res) => {
+                            let title = common::color(&Color::TIT, "Solution:");
+                            let res = common::color(&Color::SUC, &res);
+                            println!("{title} {res}\n");
+                        }
+                        Err(err) => {
+                            let title = common::color(&Color::TIT, "Error:");
+                            let err = common::color(&Color::FAI, &err);
+                            println!("{title} {err}\n");
+                        }
                     },
                 }
             }
@@ -38,13 +49,17 @@ pub fn run() {
 }
 
 fn help() -> String {
-    String::from(
-        "
-  Commands:
-    - exit      => close shell
-    - clear     => clear terminal
-    - help      => show this help message
-    - *         => parse as an expression
+    format!(
+        "{}
+  - {}  => close shell
+  - {} => clear terminal
+  - {}  => show this help message
+  - {}     => parse as an expression
 ",
+        common::color(&Color::TIT, "Commands:"),
+        common::color(&Color::SUB, "exit"),
+        common::color(&Color::SUB, "clear"),
+        common::color(&Color::SUB, "help"),
+        common::color(&Color::SUB, "*")
     )
 }

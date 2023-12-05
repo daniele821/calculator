@@ -1,7 +1,7 @@
 #![allow(dead_code, unused)]
 
 use crate::{
-    common,
+    common::{self, Color},
     expression::{
         error::{CheckErr, Error, ParseErr, SolveErr},
         token::{BinaryOp, EndBlock, StartBlock, Token, TokenType, UnaryOp},
@@ -239,7 +239,8 @@ fn check_rules(tokens: &[Token], checks: &[CheckRules]) -> Result<(), Error> {
 
 pub fn solve(tokens: &mut Vec<Token>, explain: bool) -> Result<Fraction, Error> {
     if explain {
-        println!("\nExplanation:\n{}", common::fmt(tokens, None));
+        let title = common::color(&Color::TIT, "Explanation:");
+        println!("{title}\n{}", common::fmt(tokens, None));
     }
     while solve_one_op(tokens)? {
         if explain {
