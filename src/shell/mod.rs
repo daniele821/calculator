@@ -40,7 +40,7 @@ pub fn run() {
 fn help() -> String {
     String::from(
         "
-    Commands:
+  Commands:
     - exit      => close shell
     - clear     => clear terminal
     - help      => show this help message
