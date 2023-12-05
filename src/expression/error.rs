@@ -81,7 +81,7 @@ impl Display for CheckErr {
                 format!("unbalanced blocks '{}'", common::fmt(blocks, None))
             }
             CheckErr::ExprWithNoResult(res) => {
-                format!("expression has no result '{}'", common::fmt_dbg(res, None))
+                format!("expression has no result '{}'", common::fmt(res, None))
             }
             CheckErr::InvalidAdiacents(adj) => {
                 format!("invalid adiacents '{}'", common::fmt(adj, None))
