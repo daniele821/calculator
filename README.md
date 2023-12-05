@@ -1,4 +1,5 @@
 ## calculator
+precise expression solver using fractions
 
 ### version
 - v0.1: first failed attempt at building an expression solver
