@@ -48,6 +48,15 @@ impl CheckRules {
         ]
     }
 }
+pub fn resolve(
+    str: &str,
+    fixes: &[FixRules],
+    checks: &[CheckRules],
+    explain: bool,
+) -> Result<Fraction, Error> {
+    let mut tokens = parse(str, fixes, checks)?;
+    solve(&mut tokens, explain)
+}
 
 pub fn parse(str: &str, fixes: &[FixRules], checks: &[CheckRules]) -> Result<Vec<Token>, Error> {
     let mut tokens = parse_tokens(str)?;
@@ -228,8 +237,15 @@ fn check_rules(tokens: &[Token], checks: &[CheckRules]) -> Result<(), Error> {
     Ok(())
 }
 
-pub fn solve(tokens: &mut Vec<Token>) -> Result<Fraction, Error> {
-    while solve_one_op(tokens)? {}
+pub fn solve(tokens: &mut Vec<Token>, explain: bool) -> Result<Fraction, Error> {
+    if explain {
+        println!("Explanation:\n{}", common::fmt(tokens, None));
+    }
+    while solve_one_op(tokens)? {
+        if explain {
+            println!("{}", common::fmt(tokens, None));
+        }
+    }
     get_result(tokens)
 }
 
@@ -456,8 +472,8 @@ mod tests {
     fn test_solve() -> Result<(), Error> {
         let mut expr1 = parse("12+34*45", &FixRules::all(), &CheckRules::all())?;
         let mut expr2 = parse("-|-12|+34*45", &FixRules::all(), &CheckRules::all())?;
-        assert_eq!(solve(&mut expr1)?, Fraction::from(1542));
-        assert_eq!(solve(&mut expr2)?, Fraction::from(1518));
+        assert_eq!(solve(&mut expr1, false)?, Fraction::from(1542));
+        assert_eq!(solve(&mut expr2, false)?, Fraction::from(1518));
         Ok(())
     }
 }
