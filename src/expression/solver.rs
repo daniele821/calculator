@@ -50,12 +50,7 @@ pub enum CheckRules {
 }
 impl CheckRules {
     pub fn all() -> Vec<Self> {
-        vec![
-            Self::DenyMultipleSign,
-            Self::DenyAllMultipleSign,
-            Self::DenyDivision,
-            Self::DenyDivision,
-        ]
+        vec![DENY_MLS, DENY_AMS, DENY_DIV, DENY_MOD]
     }
 }
 pub fn resolve(
@@ -246,11 +241,11 @@ fn check_rules(tokens: &[Token], checks: &[CheckRules]) -> Result<(), Error> {
         }
     }
     for pair in tokens.windows(2) {
-        if all_sign && [POS, NEG, ADD, SUB].contains(&pair[0]) && [POS, NEG].contains(&pair[1]) {
-            Err(CheckErr::BrokenCheckRule(pair.to_vec(), DENY_AMS))?;
-        }
         if mul_sign && [POS, NEG].contains(&pair[0]) && [POS, NEG].contains(&pair[1]) {
             Err(CheckErr::BrokenCheckRule(pair.to_vec(), DENY_MLS))?;
+        }
+        if all_sign && [POS, NEG, ADD, SUB].contains(&pair[0]) && [POS, NEG].contains(&pair[1]) {
+            Err(CheckErr::BrokenCheckRule(pair.to_vec(), DENY_AMS))?;
         }
     }
 
