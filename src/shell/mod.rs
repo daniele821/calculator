@@ -18,7 +18,7 @@ pub fn run() {
                 }
             }
             Err(ReadlineError::Interrupted) => {
-                break;
+                continue;
             }
             Err(ReadlineError::Eof) => {
                 break;
