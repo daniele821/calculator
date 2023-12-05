@@ -239,7 +239,7 @@ fn check_rules(tokens: &[Token], checks: &[CheckRules]) -> Result<(), Error> {
 
 pub fn solve(tokens: &mut Vec<Token>, explain: bool) -> Result<Fraction, Error> {
     if explain {
-        println!("Explanation:\n{}", common::fmt(tokens, None));
+        println!("\nExplanation:\n{}", common::fmt(tokens, None));
     }
     while solve_one_op(tokens)? {
         if explain {

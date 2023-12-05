@@ -16,14 +16,10 @@ pub fn run() {
         if let Some(str) = args.next() {
             match str {
                 "exit" => break,
-                _ => {
-                    println!();
-                    match solver::resolve(&input, &[], &[], true) {
-                        Ok(res) => println!("\nSolution: {res}"),
-                        Err(err) => println!("\n{err}"),
-                    };
-                    println!();
-                }
+                _ => match solver::resolve(&input, &[], &[], true) {
+                    Ok(res) => println!("\nSolution: {res}\n"),
+                    Err(err) => println!("\n{err}\n"),
+                },
             }
         };
 
