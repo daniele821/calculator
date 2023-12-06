@@ -1,11 +1,11 @@
 #![allow(dead_code)]
 
+use fraction::{BigUint, GenericFraction, Integer};
 use std::{
     fmt::{self, Display},
     io::{self, IsTerminal},
+    ops::Add,
 };
-
-use fraction::{BigUint, Fraction};
 
 pub enum Color {
     /// success
@@ -51,7 +51,7 @@ pub fn disp(first: &BigUint, last: &BigUint) -> BigUint {
         return first.clone();
     }
     let mid: BigUint = first + (last - first) / 2u64;
-    disp(first, &mid) * disp(&(mid + 1u64), last)
+    disp(first, &mid) * disp(&mid.add(1u64), last)
 }
 
 pub fn disp_small(first: u64, last: u64) -> BigUint {
@@ -62,7 +62,7 @@ pub fn disp_small(first: u64, last: u64) -> BigUint {
     disp_small(first, mid) * disp_small(mid + 1, last)
 }
 
-pub fn is_integer(num: &Fraction) -> bool {
+pub fn is_integer<T: Integer + Clone>(num: &GenericFraction<T>) -> bool {
     match num {
         fraction::GenericFraction::Rational(_, ratio) => ratio.is_integer(),
         _ => false,
@@ -71,9 +71,9 @@ pub fn is_integer(num: &Fraction) -> bool {
 
 #[cfg(test)]
 mod tests {
-    use std::str::FromStr;
-
     use super::*;
+    use fraction::BigFraction;
+    use std::str::FromStr;
 
     #[test]
     fn test_product() {
@@ -91,10 +91,10 @@ mod tests {
 
     #[test]
     fn test_is_integer() {
-        let int = Fraction::from_str("34/2").unwrap();
-        let rat = Fraction::from_str("34.3").unwrap();
-        let nan = Fraction::NaN;
-        let inf = Fraction::infinity();
+        let int = BigFraction::from_str("34/2").unwrap();
+        let rat = BigFraction::from_str("34.3").unwrap();
+        let nan = BigFraction::NaN;
+        let inf = BigFraction::infinity();
         assert!(is_integer(&int));
         assert!(!is_integer(&rat));
         assert!(!is_integer(&nan));
