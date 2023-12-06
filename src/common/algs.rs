@@ -48,11 +48,12 @@ pub fn to_int(num: &BigFraction) -> Option<i32> {
                 return None;
             }
             let digits = ratio.numer().clone().to_u32_digits();
-            if digits.len() != 1 || digits[0] > i32::MAX as u32 {
+            let first = digits.first().unwrap_or(&0);
+            if digits.len() > 1 || first > &(i32::MAX as u32) {
                 return None;
             }
             let sign = if sign == &Sign::Plus { 1 } else { -1 };
-            Some(digits[0] as i32 * sign)
+            Some(*first as i32 * sign)
         }
         _ => None,
     }
