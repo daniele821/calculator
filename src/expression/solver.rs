@@ -1,4 +1,4 @@
-#![allow(dead_code, unused)]
+// #![allow(dead_code, unused)]
 
 use crate::{
     common::{self, Color},
@@ -8,7 +8,7 @@ use crate::{
     },
 };
 use fraction::{BigFraction, Zero};
-use std::ops::{Div, Neg, Range, RangeBounds, RangeInclusive};
+use std::ops::Neg;
 
 const STA: TokenType = TokenType::StartBlock;
 const END: TokenType = TokenType::EndBlock;
@@ -43,9 +43,9 @@ pub enum CheckRules {
     DenyMultipleSign,
     /// deny: "++expr", "-+-+expr++expr", "expr+-expr", "expr--expr"
     DenyAllMultipleSign,
-    /// deny: expr / expr
+    /// deny: "expr / expr"
     DenyDivision,
-    /// deny: expr % expr
+    /// deny: "expr % expr"
     DenyModule,
 }
 impl CheckRules {
@@ -53,15 +53,34 @@ impl CheckRules {
         vec![DENY_MLS, DENY_AMS, DENY_DIV, DENY_MOD]
     }
 }
-pub fn resolve(str: &str, f: &[FixRules], c: &[CheckRules], e: bool) -> Result<BigFraction, Error> {
-    let mut tokens = parse(str, f, c)?;
-    solve(&mut tokens, e)
+
+pub fn resolve(
+    str: &str,
+    fixes: &[FixRules],
+    checks: &[CheckRules],
+    explain: bool,
+) -> Result<BigFraction, Error> {
+    let mut tokens = parse(str, fixes, checks)?;
+    if explain {
+        let title = common::color(&Color::TIT, "Explanation:");
+        println!("{title}\n{}", common::fmt(&tokens, None));
+    }
+    while solve_next(&mut tokens)? {
+        if explain {
+            println!("{}", common::fmt(&tokens, None));
+        }
+    }
+    let e = || SolveErr::ExprWithNoResult(tokens.clone());
+    if tokens.len() != 1 {
+        return Err(Error::Solve(SolveErr::ExprWithNoResult(tokens)));
+    }
+    Ok(tokens.first().ok_or_else(e)?.num().ok_or_else(e)?.clone())
 }
 
 pub fn parse(str: &str, fixes: &[FixRules], checks: &[CheckRules]) -> Result<Vec<Token>, Error> {
     let mut tokens = parse_tokens(str)?;
     fix_tokens(&mut tokens, fixes);
-    check_tokens(&tokens, checks)?;
+    check_rules(&tokens, checks)?;
     Ok(tokens)
 }
 
@@ -75,11 +94,9 @@ fn parse_tokens(str: &str) -> Result<Vec<Token>, Error> {
             res.push(Token::parse_num(&acc_num)?);
             acc_num.clear();
         }
-
         if c.is_whitespace() {
             continue;
         }
-
         match c {
             '+' => match res.last() {
                 Some(Token::Number(_)) | Some(Token::EndBlock(_)) => {
@@ -127,7 +144,6 @@ fn parse_tokens(str: &str) -> Result<Vec<Token>, Error> {
     if !acc_num.is_empty() {
         res.push(Token::parse_num(&acc_num)?);
     }
-
     Ok(res)
 }
 
@@ -159,49 +175,14 @@ fn fix_tokens(tokens: &mut Vec<Token>, rules: &[FixRules]) {
     }
 }
 
-fn check_tokens(tokens: &[Token], checks: &[CheckRules]) -> Result<(), Error> {
-    let mut block_stack = Vec::<StartBlock>::new();
-    let mut token_stack = Vec::<TokenType>::new();
-
-    // check rules are respected
-    check_rules(tokens, checks)?;
-
-    for token in tokens {
-        match token {
-            Token::StartBlock(start) => block_stack.push(start.clone()),
-            Token::EndBlock(end) => assert_eq!(block_stack.pop(), Some(end.corrisp())),
-            _ => (),
-        }
-    }
-
-    if !block_stack.is_empty() {
-        let block_stack: Vec<Token> = common::convert(&block_stack);
-        Err(CheckErr::UnbalancedBlocks(block_stack))?
-    }
-
-    Ok(())
-}
-
-fn check_token(stack: &mut Vec<TokenType>, elems: &[&TokenType], strictly_eq: bool) -> bool {
-    let stack_len = stack.len();
-    let elems_len = elems.len();
-    if (stack_len < elems_len) || (stack_len > elems_len && strictly_eq) {
-        return false;
-    }
-    !stack
-        .iter()
-        .rev()
-        .take(elems_len)
-        .enumerate()
-        .any(|(i, t)| &t != elems.get(elems_len - i - 1).unwrap())
-}
-
 fn check_rules(tokens: &[Token], checks: &[CheckRules]) -> Result<(), Error> {
+    let mut block_stack = Vec::<StartBlock>::new();
     let mul_sign = checks.contains(&CheckRules::DenyMultipleSign);
     let all_sign = checks.contains(&CheckRules::DenyAllMultipleSign);
     let deny_div = checks.contains(&DENY_DIV);
     let deny_mod = checks.contains(&DENY_MOD);
 
+    // check rules are respected
     for token in tokens {
         if deny_div && token == &Token::from(BinaryOp::Div) {
             Err(CheckErr::BrokenCheckRule(DENY_DIV))?;
@@ -219,43 +200,43 @@ fn check_rules(tokens: &[Token], checks: &[CheckRules]) -> Result<(), Error> {
         }
     }
 
+    // check blocks are balanced
+    for token in tokens {
+        match token {
+            Token::StartBlock(start) => block_stack.push(start.clone()),
+            Token::EndBlock(end) => assert_eq!(block_stack.pop(), Some(end.corrisp())),
+            _ => (),
+        }
+    }
+    if !block_stack.is_empty() {
+        let block_stack: Vec<Token> = common::convert(&block_stack);
+        Err(CheckErr::UnbalancedBlocks(block_stack))?
+    }
+
     Ok(())
 }
 
-pub fn solve(tokens: &mut Vec<Token>, explain: bool) -> Result<BigFraction, Error> {
-    if explain {
-        let title = common::color(&Color::TIT, "Explanation:");
-        println!("{title}\n{}", common::fmt(tokens, None));
-    }
-    while solve_one_op(tokens)? {
-        if explain {
-            println!("{}", common::fmt(tokens, None));
-        }
-    }
-    get_result(tokens)
-}
-
-pub fn solve_one_op(tokens: &mut Vec<Token>) -> Result<bool, Error> {
-    let index = next_operation(tokens);
-    if let Some(index) = index {
+pub fn solve_next(tokens: &mut Vec<Token>) -> Result<bool, Error> {
+    if let Some(index) = next_operation(tokens) {
         let token = &tokens[index];
+        let err = || Error::Solve(SolveErr::ExprWithNoResult(tokens.to_vec()));
         let mut nums = Vec::<&BigFraction>::new();
         let from: usize;
         let to: usize;
         match TokenType::from(token) {
             STA => {
-                nums.push(tokens[index + 1].num().unwrap());
+                nums.push(tokens[index + 1].num().ok_or_else(err)?);
                 from = index;
                 to = index + 2;
             }
             UNA => {
-                nums.push(tokens[index + 1].num().unwrap());
+                nums.push(tokens[index + 1].num().ok_or_else(err)?);
                 from = index;
                 to = index + 1;
             }
             BIN => {
-                nums.push(tokens[index - 1].num().unwrap());
-                nums.push(tokens[index + 1].num().unwrap());
+                nums.push(tokens[index - 1].num().ok_or_else(err)?);
+                nums.push(tokens[index + 1].num().ok_or_else(err)?);
                 from = index - 1;
                 to = index + 1;
             }
@@ -288,35 +269,6 @@ pub fn solve_one_op(tokens: &mut Vec<Token>) -> Result<bool, Error> {
     Ok(false)
 }
 
-pub fn get_result(tokens: &[Token]) -> Result<BigFraction, Error> {
-    if tokens.len() != 1 {
-        Err(SolveErr::ExprWithNoResult(Vec::from(tokens)))?;
-    }
-    let res = tokens.first().unwrap().num().unwrap();
-    Ok(res.clone())
-}
-
-fn calculate(nums: &[&BigFraction], op: &BinaryOp) -> Result<BigFraction, Error> {
-    match op {
-        BinaryOp::Mod | BinaryOp::Div => {
-            if nums[1].is_zero() {
-                let vec = vec![
-                    Token::from(nums[0].clone()),
-                    Token::from(op.clone()),
-                    Token::from(nums[1].clone()),
-                ];
-                Err(SolveErr::OperIllegalValues(vec))?;
-            }
-        }
-        _ => unreachable!(),
-    }
-    match op {
-        BinaryOp::Mod => Ok(nums[0] % nums[1]),
-        BinaryOp::Div => Ok(nums[0] / nums[1]),
-        _ => unreachable!(),
-    }
-}
-
 fn next_operation(tokens: &[Token]) -> Option<usize> {
     let mut op_index = None::<usize>;
     let mut op_priority = usize::MAX;
@@ -341,6 +293,27 @@ fn next_operation(tokens: &[Token]) -> Option<usize> {
         }
     }
     op_index
+}
+
+fn calculate(nums: &[&BigFraction], op: &BinaryOp) -> Result<BigFraction, Error> {
+    match op {
+        BinaryOp::Mod | BinaryOp::Div => {
+            if nums[1].is_zero() {
+                let vec = vec![
+                    Token::from(nums[0].clone()),
+                    Token::from(op.clone()),
+                    Token::from(nums[1].clone()),
+                ];
+                Err(SolveErr::OperIllegalValues(vec))?;
+            }
+        }
+        _ => unreachable!(),
+    }
+    match op {
+        BinaryOp::Mod => Ok(nums[0] % nums[1]),
+        BinaryOp::Div => Ok(nums[0] / nums[1]),
+        _ => unreachable!(),
+    }
 }
 
 #[cfg(test)]
@@ -426,11 +399,11 @@ mod tests {
     fn test_check() -> Result<(), Error> {
         let rule1 = &[CheckRules::DenyMultipleSign];
         let rule2 = &[CheckRules::DenyAllMultipleSign];
-        let valid1 = check_tokens(&parse_tokens("-+3.8*(1+|7|*-(5+|-1|))")?, &[]);
-        let test_rule1_ok = check_tokens(&parse_tokens("-3++5+-1-+4--2")?, rule1);
-        let test_rule1_err = check_tokens(&parse_tokens("--5")?, rule1);
-        let test_rule2_ok = check_tokens(&parse_tokens("-3+5")?, rule2);
-        let test_rule2_err = check_tokens(&parse_tokens("4--5")?, rule2);
+        let valid1 = check_rules(&parse_tokens("-+3.8*(1+|7|*-(5+|-1|))")?, &[]);
+        let test_rule1_ok = check_rules(&parse_tokens("-3++5+-1-+4--2")?, rule1);
+        let test_rule1_err = check_rules(&parse_tokens("--5")?, rule1);
+        let test_rule2_ok = check_rules(&parse_tokens("-3+5")?, rule2);
+        let test_rule2_err = check_rules(&parse_tokens("4--5")?, rule2);
         assert!(valid1.is_ok());
         assert!(test_rule1_ok.is_ok());
         assert!(test_rule1_err.is_err());
@@ -447,15 +420,6 @@ mod tests {
         assert_eq!(next_operation(&expr1), Some(3));
         assert_eq!(next_operation(&expr2), Some(2));
         assert_eq!(next_operation(&expr3), Some(4));
-        Ok(())
-    }
-
-    #[test]
-    fn test_solve() -> Result<(), Error> {
-        let mut expr1 = parse("12+34*45", &FixRules::all(), &CheckRules::all())?;
-        let mut expr2 = parse("-|-12|+34*45", &FixRules::all(), &CheckRules::all())?;
-        assert_eq!(solve(&mut expr1, false)?, BigFraction::from(1542));
-        assert_eq!(solve(&mut expr2, false)?, BigFraction::from(1518));
         Ok(())
     }
 }

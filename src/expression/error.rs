@@ -57,7 +57,7 @@ impl Display for SolveErr {
                 format!("invalid operation '{}'", common::fmt(tokens, None))
             }
             SolveErr::ExprWithNoResult(tokens) => {
-                format!("invalid operation '{}'", common::fmt(tokens, None))
+                format!("expression has no results '{}'", common::fmt(tokens, None))
             }
         };
         write!(f, "{err}")
