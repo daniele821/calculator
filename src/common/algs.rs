@@ -86,6 +86,9 @@ pub fn exp(base: &BigFraction, exp: &BigFraction) -> Result<BigFraction, Error> 
 }
 
 pub fn fact(num: &BigFraction) -> Result<BigFraction, Error> {
+    if num.is_zero() {
+        return Ok(BigFraction::from(1));
+    }
     let err = || {
         SolveErr::OperIllegalValues(vec![
             Token::Number(num.clone()),
