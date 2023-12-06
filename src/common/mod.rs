@@ -55,7 +55,6 @@ pub fn disp(first: &BigUint, last: &BigUint) -> BigUint {
 }
 
 pub fn disp_small(first: u64, last: u64) -> BigUint {
-    println!("first: {first}, last: {last}");
     if first == last {
         return BigUint::from(first);
     }
