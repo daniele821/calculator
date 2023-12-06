@@ -2,7 +2,7 @@ use std::ops::Add;
 
 use crate::expression::{
     error::{Error, SolveErr},
-    token::{BinaryOp, Token},
+    token::{BinaryOp, Token, UnaryOpRight},
 };
 use fraction::{BigFraction, BigUint, GenericFraction, Ratio, Sign, Zero};
 
@@ -89,7 +89,7 @@ pub fn fact(num: &BigFraction) -> Result<BigFraction, Error> {
     let err = || {
         SolveErr::OperIllegalValues(vec![
             Token::Number(num.clone()),
-            todo!("add factorial operator!"),
+            Token::from(UnaryOpRight::Fact),
         ])
     };
     match num {
