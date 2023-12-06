@@ -17,7 +17,7 @@ pub enum Token {
 pub enum TokenType {
     StartBlock,
     EndBlock,
-    UnaryOperator,
+    UnaryOperatorLeft,
     BinaryOperator,
     Number,
 }
@@ -85,7 +85,7 @@ impl From<&Token> for TokenType {
         match value {
             Token::StartBlock(_) => Self::StartBlock,
             Token::EndBlock(_) => Self::EndBlock,
-            Token::UnaryOperatorLeft(_) => Self::UnaryOperator,
+            Token::UnaryOperatorLeft(_) => Self::UnaryOperatorLeft,
             Token::BinaryOperator(_) => Self::BinaryOperator,
             Token::Number(_) => Self::Number,
         }

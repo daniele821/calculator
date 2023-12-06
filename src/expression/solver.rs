@@ -12,7 +12,7 @@ use std::ops::Neg;
 
 const STA: TokenType = TokenType::StartBlock;
 const END: TokenType = TokenType::EndBlock;
-const UNA: TokenType = TokenType::UnaryOperator;
+const UNA: TokenType = TokenType::UnaryOperatorLeft;
 const BIN: TokenType = TokenType::BinaryOperator;
 const NUM: TokenType = TokenType::Number;
 const POS: Token = Token::UnaryOperatorLeft(UnaryOpLeft::Pos);
