@@ -8,7 +8,7 @@ use std::{fmt::Display, mem, str::FromStr};
 pub enum Token {
     StartBlock(StartBlock),
     EndBlock(EndBlock),
-    UnaryOperator(UnaryOp),
+    UnaryOperatorLeft(UnaryOpLeft),
     BinaryOperator(BinaryOp),
     Number(BigFraction),
 }
@@ -35,7 +35,7 @@ pub enum EndBlock {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub enum UnaryOp {
+pub enum UnaryOpLeft {
     Neg,
     Pos,
 }
@@ -62,9 +62,9 @@ impl From<EndBlock> for Token {
     }
 }
 
-impl From<UnaryOp> for Token {
-    fn from(value: UnaryOp) -> Self {
-        Token::UnaryOperator(value)
+impl From<UnaryOpLeft> for Token {
+    fn from(value: UnaryOpLeft) -> Self {
+        Token::UnaryOperatorLeft(value)
     }
 }
 
@@ -85,7 +85,7 @@ impl From<&Token> for TokenType {
         match value {
             Token::StartBlock(_) => Self::StartBlock,
             Token::EndBlock(_) => Self::EndBlock,
-            Token::UnaryOperator(_) => Self::UnaryOperator,
+            Token::UnaryOperatorLeft(_) => Self::UnaryOperator,
             Token::BinaryOperator(_) => Self::BinaryOperator,
             Token::Number(_) => Self::Number,
         }
@@ -112,11 +112,11 @@ impl Display for EndBlock {
     }
 }
 
-impl Display for UnaryOp {
+impl Display for UnaryOpLeft {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let str = match self {
-            UnaryOp::Neg => "-",
-            UnaryOp::Pos => "+",
+            UnaryOpLeft::Neg => "-",
+            UnaryOpLeft::Pos => "+",
         };
         write!(f, "{str}")
     }
@@ -141,7 +141,7 @@ impl Display for Token {
         let str = match self {
             Token::StartBlock(str) => str.to_string(),
             Token::EndBlock(str) => str.to_string(),
-            Token::UnaryOperator(str) => str.to_string(),
+            Token::UnaryOperatorLeft(str) => str.to_string(),
             Token::BinaryOperator(str) => str.to_string(),
             Token::Number(str) => str.to_string(),
         };
@@ -183,7 +183,7 @@ impl Token {
     pub fn priority(&self) -> usize {
         match self {
             Token::StartBlock(_) => 0,
-            Token::UnaryOperator(_) => 1,
+            Token::UnaryOperatorLeft(_) => 1,
             Token::BinaryOperator(op) => match op {
                 BinaryOp::Exp => 2,
                 BinaryOp::Mul | BinaryOp::Mod | BinaryOp::Div => 3,

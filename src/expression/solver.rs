@@ -4,7 +4,7 @@ use crate::{
     common::{self, algs, Color},
     expression::{
         error::{CheckErr, Error, ParseErr, SolveErr},
-        token::{BinaryOp, EndBlock, StartBlock, Token, TokenType, UnaryOp},
+        token::{BinaryOp, EndBlock, StartBlock, Token, TokenType, UnaryOpLeft},
     },
 };
 use fraction::{BigFraction, Zero};
@@ -15,8 +15,8 @@ const END: TokenType = TokenType::EndBlock;
 const UNA: TokenType = TokenType::UnaryOperator;
 const BIN: TokenType = TokenType::BinaryOperator;
 const NUM: TokenType = TokenType::Number;
-const POS: Token = Token::UnaryOperator(UnaryOp::Pos);
-const NEG: Token = Token::UnaryOperator(UnaryOp::Neg);
+const POS: Token = Token::UnaryOperatorLeft(UnaryOpLeft::Pos);
+const NEG: Token = Token::UnaryOperatorLeft(UnaryOpLeft::Neg);
 const ADD: Token = Token::BinaryOperator(BinaryOp::Add);
 const SUB: Token = Token::BinaryOperator(BinaryOp::Sub);
 const DENY_DIV: CheckRules = CheckRules::DenyDivision;
@@ -105,13 +105,13 @@ fn parse_tokens(str: &str) -> Result<Vec<Token>, Error> {
                 Some(Token::Number(_)) | Some(Token::EndBlock(_)) => {
                     res.push(Token::from(BinaryOp::Add))
                 }
-                _ => res.push(Token::from(UnaryOp::Pos)),
+                _ => res.push(Token::from(UnaryOpLeft::Pos)),
             },
             '-' => match res.last() {
                 Some(Token::Number(_)) | Some(Token::EndBlock(_)) => {
                     res.push(Token::from(BinaryOp::Sub))
                 }
-                _ => res.push(Token::from(UnaryOp::Neg)),
+                _ => res.push(Token::from(UnaryOpLeft::Neg)),
             },
             '^' => res.push(Token::from(BinaryOp::Exp)),
             '*' => res.push(Token::from(BinaryOp::Mul)),
@@ -255,9 +255,9 @@ pub fn solve_next(tokens: &mut Vec<Token>) -> Result<bool, Error> {
                 StartBlock::Bracket => nums[0].clone(),
                 StartBlock::Abs => nums[0].abs(),
             },
-            Token::UnaryOperator(unary) => match unary {
-                UnaryOp::Neg => nums[0].neg(),
-                UnaryOp::Pos => nums[0].clone(),
+            Token::UnaryOperatorLeft(unary) => match unary {
+                UnaryOpLeft::Neg => nums[0].neg(),
+                UnaryOpLeft::Pos => nums[0].clone(),
             },
             Token::BinaryOperator(bin) => match bin {
                 BinaryOp::Add => nums[0] + nums[1],
@@ -348,10 +348,10 @@ mod tests {
             Token::from(BinaryOp::Sub),
             Token::parse_num("5")?,
             Token::from(BinaryOp::Mul),
-            Token::from(UnaryOp::Neg),
+            Token::from(UnaryOpLeft::Neg),
             Token::from(StartBlock::Bracket),
             Token::from(StartBlock::Abs),
-            Token::from(UnaryOp::Neg),
+            Token::from(UnaryOpLeft::Neg),
             Token::parse_num("37")?,
             Token::from(EndBlock::Abs),
             Token::from(BinaryOp::Mul),
