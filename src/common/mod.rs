@@ -5,7 +5,7 @@ use std::{
     io::{self, IsTerminal},
 };
 
-use fraction::BigUint;
+use fraction::{BigUint, Fraction};
 
 pub enum Color {
     /// success
@@ -62,8 +62,17 @@ pub fn disp_small(first: u64, last: u64) -> BigUint {
     disp_small(first, mid) * disp_small(mid + 1, last)
 }
 
+pub fn is_integer(num: &Fraction) -> bool {
+    match num {
+        fraction::GenericFraction::Rational(_, ratio) => ratio.is_integer(),
+        _ => false,
+    }
+}
+
 #[cfg(test)]
 mod tests {
+    use std::str::FromStr;
+
     use super::*;
 
     #[test]
@@ -78,5 +87,17 @@ mod tests {
         let actual1 = disp_small(4u64, 6u64);
         let expected1 = BigUint::from(120u64);
         assert_eq!(actual1, expected1);
+    }
+
+    #[test]
+    fn test_is_integer() {
+        let int = Fraction::from_str("34/2").unwrap();
+        let rat = Fraction::from_str("34.3").unwrap();
+        let nan = Fraction::NaN;
+        let inf = Fraction::infinity();
+        assert!(is_integer(&int));
+        assert!(!is_integer(&rat));
+        assert!(!is_integer(&nan));
+        assert!(!is_integer(&inf));
     }
 }
