@@ -1,7 +1,7 @@
 // #![allow(dead_code, unused)]
 
 use crate::{
-    common::{self, Color},
+    common::{self, algs, Color},
     expression::{
         error::{CheckErr, Error, ParseErr, SolveErr},
         token::{BinaryOp, EndBlock, StartBlock, Token, TokenType, UnaryOp},
@@ -110,6 +110,7 @@ fn parse_tokens(str: &str) -> Result<Vec<Token>, Error> {
                 }
                 _ => res.push(Token::from(UnaryOp::Neg)),
             },
+            '^' => res.push(Token::from(BinaryOp::Exp)),
             '*' => res.push(Token::from(BinaryOp::Mul)),
             '/' => res.push(Token::from(BinaryOp::Div)),
             '%' => res.push(Token::from(BinaryOp::Mod)),
@@ -257,6 +258,7 @@ pub fn solve_next(tokens: &mut Vec<Token>) -> Result<bool, Error> {
                 BinaryOp::Mul => nums[0] * nums[1],
                 BinaryOp::Mod => calculate(&nums, bin)?,
                 BinaryOp::Div => calculate(&nums, bin)?,
+                BinaryOp::Exp => algs::exp(nums[0], nums[1])?,
             },
             _ => unreachable!(),
         };

@@ -47,6 +47,7 @@ pub enum BinaryOp {
     Mul,
     Mod,
     Div,
+    Exp,
 }
 
 impl From<StartBlock> for Token {
@@ -129,6 +130,7 @@ impl Display for BinaryOp {
             BinaryOp::Mul => "*",
             BinaryOp::Mod => "%",
             BinaryOp::Div => "/",
+            BinaryOp::Exp => "^",
         };
         write!(f, "{str}")
     }
@@ -183,8 +185,9 @@ impl Token {
             Token::StartBlock(_) => 0,
             Token::UnaryOperator(_) => 1,
             Token::BinaryOperator(op) => match op {
-                BinaryOp::Mul | BinaryOp::Mod | BinaryOp::Div => 2,
-                BinaryOp::Add | BinaryOp::Sub => 3,
+                BinaryOp::Exp => 2,
+                BinaryOp::Mul | BinaryOp::Mod | BinaryOp::Div => 3,
+                BinaryOp::Add | BinaryOp::Sub => 4,
             },
             _ => usize::MAX,
         }

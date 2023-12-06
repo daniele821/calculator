@@ -2,7 +2,7 @@ use std::ops::Add;
 
 use crate::expression::{
     error::{Error, SolveErr},
-    token::Token,
+    token::{BinaryOp, Token},
 };
 use fraction::{BigFraction, BigUint, GenericFraction, Ratio, Sign, Zero};
 
@@ -62,7 +62,7 @@ pub fn exp(base: &BigFraction, exp: &BigFraction) -> Result<BigFraction, Error> 
     let err = || {
         SolveErr::OperIllegalValues(vec![
             Token::Number(base.clone()),
-            todo!("add exp operator!"),
+            Token::from(BinaryOp::Exp),
             Token::Number(exp.clone()),
         ])
     };
