@@ -27,6 +27,7 @@ const DENY_MOD: CheckRules = CheckRules::DenyModule;
 const DENY_MLS: CheckRules = CheckRules::DenyMultipleSign;
 const DENY_AMS: CheckRules = CheckRules::DenyAllMultipleSign;
 const DENY_EXP: CheckRules = CheckRules::DenyExponent;
+const DENY_FAC: CheckRules = CheckRules::DebyFactorial;
 
 #[derive(Debug, Clone, Eq, PartialEq)]
 pub enum FixRules {
@@ -53,10 +54,12 @@ pub enum CheckRules {
     DenyModule,
     /// deny: "expr ^ int_expr"
     DenyExponent,
+    /// deny: "expr !"
+    DebyFactorial,
 }
 impl CheckRules {
     pub fn all() -> Vec<Self> {
-        vec![DENY_MLS, DENY_AMS, DENY_DIV, DENY_MOD, DENY_EXP]
+        vec![DENY_MLS, DENY_AMS, DENY_DIV, DENY_MOD, DENY_EXP, DENY_FAC]
     }
 }
 
@@ -190,6 +193,7 @@ fn check_rules(tokens: &[Token], checks: &[CheckRules]) -> Result<(), Error> {
     let deny_div = checks.contains(&DENY_DIV);
     let deny_mod = checks.contains(&DENY_MOD);
     let deny_exp = checks.contains(&DENY_EXP);
+    let deny_fac = checks.contains(&DENY_FAC);
 
     // check rules are respected
     for token in tokens {
@@ -201,6 +205,9 @@ fn check_rules(tokens: &[Token], checks: &[CheckRules]) -> Result<(), Error> {
         }
         if deny_exp && token == &Token::from(BinaryOp::Exp) {
             Err(CheckErr::BrokenCheckRule(DENY_EXP))?;
+        }
+        if deny_fac && token == &Token::from(UnaryOpRight::Fact) {
+            Err(CheckErr::BrokenCheckRule(DENY_FAC))?;
         }
     }
     for pair in tokens.windows(2) {
