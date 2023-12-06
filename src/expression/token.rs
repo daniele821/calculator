@@ -9,6 +9,7 @@ pub enum Token {
     StartBlock(StartBlock),
     EndBlock(EndBlock),
     UnaryOperatorLeft(UnaryOpLeft),
+    UnaryOperatorRight(UnaryOpRight),
     BinaryOperator(BinaryOp),
     Number(BigFraction),
 }
@@ -18,6 +19,7 @@ pub enum TokenType {
     StartBlock,
     EndBlock,
     UnaryOperatorLeft,
+    UnaryOperatorRight,
     BinaryOperator,
     Number,
 }
@@ -38,6 +40,11 @@ pub enum EndBlock {
 pub enum UnaryOpLeft {
     Neg,
     Pos,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum UnaryOpRight {
+    Fact,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -88,6 +95,7 @@ impl From<&Token> for TokenType {
             Token::UnaryOperatorLeft(_) => Self::UnaryOperatorLeft,
             Token::BinaryOperator(_) => Self::BinaryOperator,
             Token::Number(_) => Self::Number,
+            Token::UnaryOperatorRight(_) => Self::UnaryOperatorRight,
         }
     }
 }
@@ -122,6 +130,15 @@ impl Display for UnaryOpLeft {
     }
 }
 
+impl Display for UnaryOpRight {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let str = match self {
+            UnaryOpRight::Fact => "!",
+        };
+        write!(f, "{str}")
+    }
+}
+
 impl Display for BinaryOp {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let str = match self {
@@ -142,6 +159,7 @@ impl Display for Token {
             Token::StartBlock(str) => str.to_string(),
             Token::EndBlock(str) => str.to_string(),
             Token::UnaryOperatorLeft(str) => str.to_string(),
+            Token::UnaryOperatorRight(str) => str.to_string(),
             Token::BinaryOperator(str) => str.to_string(),
             Token::Number(str) => str.to_string(),
         };
@@ -183,11 +201,12 @@ impl Token {
     pub fn priority(&self) -> usize {
         match self {
             Token::StartBlock(_) => 0,
-            Token::UnaryOperatorLeft(_) => 1,
+            Token::UnaryOperatorRight(_) => 1,
+            Token::UnaryOperatorLeft(_) => 2,
             Token::BinaryOperator(op) => match op {
-                BinaryOp::Exp => 2,
-                BinaryOp::Mul | BinaryOp::Mod | BinaryOp::Div => 3,
-                BinaryOp::Add | BinaryOp::Sub => 4,
+                BinaryOp::Exp => 3,
+                BinaryOp::Mul | BinaryOp::Mod | BinaryOp::Div => 4,
+                BinaryOp::Add | BinaryOp::Sub => 5,
             },
             _ => usize::MAX,
         }
