@@ -475,9 +475,9 @@ mod tests {
 
     #[test]
     fn test_next_op() -> Result<(), Error> {
-        let expr1 = parse("12+34*45", &FixRules::all(), &CheckRules::all())?;
-        let expr2 = parse("12+(12)", &FixRules::all(), &CheckRules::all())?;
-        let expr3 = parse("12+(12/34)", &FixRules::all(), &CheckRules::all())?;
+        let expr1 = parse("12+34*45", &FixRules::all(), &[])?;
+        let expr2 = parse("12+(12)", &FixRules::all(), &[])?;
+        let expr3 = parse("12+(12/34)", &FixRules::all(), &[])?;
         assert_eq!(next_operation(&expr1), Some(3));
         assert_eq!(next_operation(&expr2), Some(2));
         assert_eq!(next_operation(&expr3), Some(4));

@@ -3,7 +3,10 @@
 use std::{
     fmt::{self, Display},
     io::{self, IsTerminal},
+    ops::Add,
 };
+
+use fraction::BigUint;
 
 pub enum Color {
     /// success
@@ -42,4 +45,24 @@ pub fn fmt<T: fmt::Display>(items: &[T], sep: Option<&str>) -> String {
 
 pub fn convert<T: Clone, F: From<T>>(items: &[T]) -> Vec<F> {
     items.iter().map(|t| F::from(t.clone())).collect()
+}
+
+pub fn product_split_halves(first: &BigUint, last: &BigUint) -> BigUint {
+    if first == last {
+        return first.clone();
+    }
+    let mid: BigUint = first + (last - first) / 2u64;
+    product_split_halves(first, &mid) * product_split_halves(&mid.add(1u64), last)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_product() {
+        let actual1 = product_split_halves(&BigUint::from(4u64), &BigUint::from(6u64));
+        let expected1 = BigUint::from(120u64);
+        assert_eq!(actual1, expected1);
+    }
 }
