@@ -75,6 +75,12 @@ impl From<UnaryOpLeft> for Token {
     }
 }
 
+impl From<UnaryOpRight> for Token {
+    fn from(value: UnaryOpRight) -> Self {
+        Token::UnaryOperatorRight(value)
+    }
+}
+
 impl From<BinaryOp> for Token {
     fn from(value: BinaryOp) -> Self {
         Token::BinaryOperator(value)

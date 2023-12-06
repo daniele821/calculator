@@ -10,9 +10,12 @@ use crate::{
 use fraction::{BigFraction, Zero};
 use std::ops::Neg;
 
+use super::token::UnaryOpRight;
+
 const STA: TokenType = TokenType::StartBlock;
 const END: TokenType = TokenType::EndBlock;
-const UNA: TokenType = TokenType::UnaryOperatorLeft;
+const UNL: TokenType = TokenType::UnaryOperatorLeft;
+const UNR: TokenType = TokenType::UnaryOperatorRight;
 const BIN: TokenType = TokenType::BinaryOperator;
 const NUM: TokenType = TokenType::Number;
 const POS: Token = Token::UnaryOperatorLeft(UnaryOpLeft::Pos);
@@ -102,17 +105,18 @@ fn parse_tokens(str: &str) -> Result<Vec<Token>, Error> {
         }
         match c {
             '+' => match res.last() {
-                Some(Token::Number(_)) | Some(Token::EndBlock(_)) => {
-                    res.push(Token::from(BinaryOp::Add))
-                }
+                Some(Token::Number(_))
+                | Some(Token::EndBlock(_))
+                | Some(Token::UnaryOperatorRight(_)) => res.push(Token::from(BinaryOp::Add)),
                 _ => res.push(Token::from(UnaryOpLeft::Pos)),
             },
             '-' => match res.last() {
-                Some(Token::Number(_)) | Some(Token::EndBlock(_)) => {
-                    res.push(Token::from(BinaryOp::Sub))
-                }
+                Some(Token::Number(_))
+                | Some(Token::EndBlock(_))
+                | Some(Token::UnaryOperatorRight(_)) => res.push(Token::from(BinaryOp::Sub)),
                 _ => res.push(Token::from(UnaryOpLeft::Neg)),
             },
+            '!' => res.push(Token::from(UnaryOpRight::Fact)),
             '^' => res.push(Token::from(BinaryOp::Exp)),
             '*' => res.push(Token::from(BinaryOp::Mul)),
             '/' => res.push(Token::from(BinaryOp::Div)),
@@ -237,10 +241,15 @@ pub fn solve_next(tokens: &mut Vec<Token>) -> Result<bool, Error> {
                 from = index;
                 to = index + 2;
             }
-            UNA => {
+            UNL => {
                 nums.push(tokens[index + 1].num().ok_or_else(err)?);
                 from = index;
                 to = index + 1;
+            }
+            UNR => {
+                nums.push(tokens[index - 1].num().ok_or_else(err)?);
+                from = index - 1;
+                to = index;
             }
             BIN => {
                 nums.push(tokens[index - 1].num().ok_or_else(err)?);
@@ -258,6 +267,9 @@ pub fn solve_next(tokens: &mut Vec<Token>) -> Result<bool, Error> {
             Token::UnaryOperatorLeft(unary) => match unary {
                 UnaryOpLeft::Neg => nums[0].neg(),
                 UnaryOpLeft::Pos => nums[0].clone(),
+            },
+            Token::UnaryOperatorRight(unary) => match unary {
+                UnaryOpRight::Fact => algs::fact(nums[0])?,
             },
             Token::BinaryOperator(bin) => match bin {
                 BinaryOp::Add => nums[0] + nums[1],
@@ -290,7 +302,8 @@ fn next_operation(tokens: &[Token]) -> Option<usize> {
             match (before1, current, after1, after2) {
                 (Some(NUM), Some(BIN), Some(NUM), _)
                 | (_, Some(STA), Some(NUM), Some(END))
-                | (_, Some(UNA), Some(NUM), _) => {
+                | (_, Some(UNL), Some(NUM), _)
+                | (Some(NUM), Some(UNR), _, _) => {
                     op_index = Some(index);
                     op_priority = token.priority();
                 }
