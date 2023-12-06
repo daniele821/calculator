@@ -3,7 +3,6 @@
 use std::{
     fmt::{self, Display},
     io::{self, IsTerminal},
-    ops::Add,
 };
 
 use fraction::BigUint;
@@ -47,12 +46,21 @@ pub fn convert<T: Clone, F: From<T>>(items: &[T]) -> Vec<F> {
     items.iter().map(|t| F::from(t.clone())).collect()
 }
 
-pub fn product_split_halves(first: &BigUint, last: &BigUint) -> BigUint {
+pub fn disp(first: &BigUint, last: &BigUint) -> BigUint {
     if first == last {
         return first.clone();
     }
     let mid: BigUint = first + (last - first) / 2u64;
-    product_split_halves(first, &mid) * product_split_halves(&mid.add(1u64), last)
+    disp(first, &mid) * disp(&(mid + 1u64), last)
+}
+
+pub fn disp_small(first: u64, last: u64) -> BigUint {
+    println!("first: {first}, last: {last}");
+    if first == last {
+        return BigUint::from(first);
+    }
+    let mid = first + (last - first) / 2;
+    disp_small(first, mid) * disp_small(mid + 1, last)
 }
 
 #[cfg(test)]
@@ -61,7 +69,14 @@ mod tests {
 
     #[test]
     fn test_product() {
-        let actual1 = product_split_halves(&BigUint::from(4u64), &BigUint::from(6u64));
+        let actual1 = disp(&BigUint::from(4u64), &BigUint::from(6u64));
+        let expected1 = BigUint::from(120u64);
+        assert_eq!(actual1, expected1);
+    }
+
+    #[test]
+    fn test_product_small() {
+        let actual1 = disp_small(4u64, 6u64);
         let expected1 = BigUint::from(120u64);
         assert_eq!(actual1, expected1);
     }
