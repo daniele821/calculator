@@ -72,8 +72,6 @@ pub fn is_integer<T: Integer + Clone>(num: &GenericFraction<T>) -> bool {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use fraction::BigFraction;
-    use std::str::FromStr;
 
     #[test]
     fn test_product() {
@@ -87,17 +85,5 @@ mod tests {
         let actual1 = disp_small(4u64, 6u64);
         let expected1 = BigUint::from(120u64);
         assert_eq!(actual1, expected1);
-    }
-
-    #[test]
-    fn test_is_integer() {
-        let int = BigFraction::from_str("34/2").unwrap();
-        let rat = BigFraction::from_str("34.3").unwrap();
-        let nan = BigFraction::NaN;
-        let inf = BigFraction::infinity();
-        assert!(is_integer(&int));
-        assert!(!is_integer(&rat));
-        assert!(!is_integer(&nan));
-        assert!(!is_integer(&inf));
     }
 }

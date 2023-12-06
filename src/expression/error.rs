@@ -23,12 +23,12 @@ pub enum ParseErr {
 #[derive(Debug, Clone, Eq, PartialEq)]
 pub enum CheckErr {
     UnbalancedBlocks(Vec<Token>),
-    ExprWithNoResult(Vec<TokenType>),
-    BrokenCheckRule(Vec<Token>, CheckRules),
+    BrokenCheckRule(CheckRules),
 }
 
 #[derive(Debug, Clone, Eq, PartialEq)]
 pub enum SolveErr {
+    ExprWithNoResult(Vec<Token>),
     OperIllegalValues(Vec<Token>),
 }
 
@@ -56,6 +56,9 @@ impl Display for SolveErr {
             SolveErr::OperIllegalValues(tokens) => {
                 format!("invalid operation '{}'", common::fmt(tokens, None))
             }
+            SolveErr::ExprWithNoResult(tokens) => {
+                format!("invalid operation '{}'", common::fmt(tokens, None))
+            }
         };
         write!(f, "{err}")
     }
@@ -77,11 +80,8 @@ impl Display for CheckErr {
             CheckErr::UnbalancedBlocks(blocks) => {
                 format!("unbalanced blocks '{}'", common::fmt(blocks, None))
             }
-            CheckErr::ExprWithNoResult(res) => {
-                format!("expression has no result '{}'", common::fmt(res, None))
-            }
-            CheckErr::BrokenCheckRule(a, r) => {
-                format!("broken check rule '{r:?}', with '{}'", common::fmt(a, None))
+            CheckErr::BrokenCheckRule(rule) => {
+                format!("broken check rule '{rule:?}'")
             }
         };
         write!(f, "{err}")

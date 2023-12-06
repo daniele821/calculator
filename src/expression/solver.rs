@@ -53,14 +53,9 @@ impl CheckRules {
         vec![DENY_MLS, DENY_AMS, DENY_DIV, DENY_MOD]
     }
 }
-pub fn resolve(
-    str: &str,
-    fixes: &[FixRules],
-    checks: &[CheckRules],
-    explain: bool,
-) -> Result<BigFraction, Error> {
-    let mut tokens = parse(str, fixes, checks)?;
-    solve(&mut tokens, explain)
+pub fn resolve(str: &str, f: &[FixRules], c: &[CheckRules], e: bool) -> Result<BigFraction, Error> {
+    let mut tokens = parse(str, f, c)?;
+    solve(&mut tokens, e)
 }
 
 pub fn parse(str: &str, fixes: &[FixRules], checks: &[CheckRules]) -> Result<Vec<Token>, Error> {
@@ -172,41 +167,16 @@ fn check_tokens(tokens: &[Token], checks: &[CheckRules]) -> Result<(), Error> {
     check_rules(tokens, checks)?;
 
     for token in tokens {
-        // check blocks
         match token {
             Token::StartBlock(start) => block_stack.push(start.clone()),
             Token::EndBlock(end) => assert_eq!(block_stack.pop(), Some(end.corrisp())),
             _ => (),
         }
-        // collapse expression
-        token_stack.push(TokenType::from(token));
-        loop {
-            let len = token_stack.len();
-            if check_token(&mut token_stack, &[&NUM, &BIN, &NUM], false) {
-                token_stack.drain(len - 2..=len - 1);
-                continue;
-            }
-            if check_token(&mut token_stack, &[&UNA, &NUM], false) {
-                token_stack.remove(len - 2);
-                continue;
-            }
-            if check_token(&mut token_stack, &[&STA, &NUM, &END], false) {
-                token_stack.remove(len - 1);
-                token_stack.remove(len - 3);
-                continue;
-            }
-            break;
-        }
     }
 
-    // errors for unbalanced blocks
     if !block_stack.is_empty() {
         let block_stack: Vec<Token> = common::convert(&block_stack);
         Err(CheckErr::UnbalancedBlocks(block_stack))?
-    }
-    // errors for expression collapsion
-    if token_stack.len() != 1 || token_stack.first() != Some(&NUM) {
-        Err(CheckErr::ExprWithNoResult(token_stack))?
     }
 
     Ok(())
@@ -234,18 +204,18 @@ fn check_rules(tokens: &[Token], checks: &[CheckRules]) -> Result<(), Error> {
 
     for token in tokens {
         if deny_div && token == &Token::from(BinaryOp::Div) {
-            Err(CheckErr::BrokenCheckRule(vec![token.clone()], DENY_DIV))?;
+            Err(CheckErr::BrokenCheckRule(DENY_DIV))?;
         }
         if deny_mod && token == &Token::from(BinaryOp::Mod) {
-            Err(CheckErr::BrokenCheckRule(vec![token.clone()], DENY_MOD))?;
+            Err(CheckErr::BrokenCheckRule(DENY_MOD))?;
         }
     }
     for pair in tokens.windows(2) {
         if mul_sign && [POS, NEG].contains(&pair[0]) && [POS, NEG].contains(&pair[1]) {
-            Err(CheckErr::BrokenCheckRule(pair.to_vec(), DENY_MLS))?;
+            Err(CheckErr::BrokenCheckRule(DENY_MLS))?;
         }
         if all_sign && [POS, NEG, ADD, SUB].contains(&pair[0]) && [POS, NEG].contains(&pair[1]) {
-            Err(CheckErr::BrokenCheckRule(pair.to_vec(), DENY_AMS))?;
+            Err(CheckErr::BrokenCheckRule(DENY_AMS))?;
         }
     }
 
@@ -309,22 +279,20 @@ pub fn solve_one_op(tokens: &mut Vec<Token>) -> Result<bool, Error> {
             },
             _ => unreachable!(),
         };
-        if num.is_nan() || num.is_infinite() {
-            panic!("number is not rational!");
-        }
         tokens.drain(from..=to);
         tokens.insert(from, Token::Number(num));
         return Ok(true);
+    } else if tokens.len() != 1 {
+        Err(SolveErr::ExprWithNoResult(tokens.clone()))?;
     }
     Ok(false)
 }
 
 pub fn get_result(tokens: &[Token]) -> Result<BigFraction, Error> {
-    assert_eq!(tokens.len(), 1);
-    let res = tokens.first().unwrap().num().unwrap();
-    if res.is_nan() || res.is_infinite() {
-        panic!("number is not rational!");
+    if tokens.len() != 1 {
+        Err(SolveErr::ExprWithNoResult(Vec::from(tokens)))?;
     }
+    let res = tokens.first().unwrap().num().unwrap();
     Ok(res.clone())
 }
 
@@ -459,13 +427,11 @@ mod tests {
         let rule1 = &[CheckRules::DenyMultipleSign];
         let rule2 = &[CheckRules::DenyAllMultipleSign];
         let valid1 = check_tokens(&parse_tokens("-+3.8*(1+|7|*-(5+|-1|))")?, &[]);
-        let invalid1 = check_tokens(&parse_tokens("13*()+9")?, &[]);
         let test_rule1_ok = check_tokens(&parse_tokens("-3++5+-1-+4--2")?, rule1);
         let test_rule1_err = check_tokens(&parse_tokens("--5")?, rule1);
         let test_rule2_ok = check_tokens(&parse_tokens("-3+5")?, rule2);
         let test_rule2_err = check_tokens(&parse_tokens("4--5")?, rule2);
         assert!(valid1.is_ok());
-        assert!(invalid1.is_err());
         assert!(test_rule1_ok.is_ok());
         assert!(test_rule1_err.is_err());
         assert!(test_rule2_ok.is_ok());
