@@ -303,6 +303,7 @@ fn next_operation(tokens: &[Token]) -> Option<usize> {
     for (index, token) in tokens.iter().enumerate() {
         if token.priority() < op_priority {
             let before1 = tokens.get(index.saturating_sub(1)).map(TokenType::from);
+            let before1 = if index == 0 { None } else { before1 };
             let current = tokens.get(index).map(TokenType::from);
             let after1 = tokens.get(index + 1).map(TokenType::from);
             let after2 = tokens.get(index + 2).map(TokenType::from);
