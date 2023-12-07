@@ -99,7 +99,7 @@ fn parse_tokens(str: &str) -> Result<Vec<Token>, Error> {
     let mut res = Vec::new();
 
     for c in str.chars() {
-        if !acc_num.is_empty() && !c.is_ascii_digit() && c != '.' {
+        if !acc_num.is_empty() && !c.is_ascii_digit() && c != '.' && c != '_' {
             res.push(Token::parse_num(&acc_num)?);
             acc_num.clear();
         }
@@ -147,7 +147,7 @@ fn parse_tokens(str: &str) -> Result<Vec<Token>, Error> {
                     res.push(Token::from(StartBlock::Abs))
                 }
             },
-            '0'..='9' | '.' => acc_num.push(c),
+            '0'..='9' | '.' | '_' => acc_num.push(c),
             _ => Err(ParseErr::InvalidToken(c.to_string()))?,
         }
     }
