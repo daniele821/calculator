@@ -11,3 +11,4 @@ precise expression solver using fractions
 - v1.1: added a basic shell and added support for limitless dimension numbers
 - v1.2: added "^","!" operators, and checks rules to deny operators which can fail (ie "/","%","!","^")
 - v1.3: added infrastructre for options and added decimal result as an option
+- v1.4: added check/fix rules to configurable options (only None or all, WIP: set each check/fix rule)
