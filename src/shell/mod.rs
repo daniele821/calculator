@@ -5,7 +5,7 @@ use rustyline::{error::ReadlineError, DefaultEditor};
 
 use crate::{
     common::{self, Color},
-    expression::solver::{self, FixRules},
+    expression::solver::{self, CheckRules, FixRules},
 };
 
 struct Options {
@@ -13,6 +13,10 @@ struct Options {
     show_dec: bool,
     /// decimal precision for result
     dec_len: u64,
+    /// check rules to apply in calculations
+    checks: Vec<CheckRules>,
+    /// fix rules to apply in calculations
+    fixes: Vec<FixRules>,
 }
 
 impl Options {
@@ -22,6 +26,8 @@ impl Options {
         Self {
             show_dec: true,
             dec_len: 20,
+            checks: vec![],
+            fixes: FixRules::all().to_vec(),
         }
     }
 
@@ -98,7 +104,7 @@ pub fn run() {
                     }
                     "help" => println!("{}", help()),
                     "set" => opt.change(&line),
-                    _ => match solver::resolve(&line, &FixRules::all(), &[], true) {
+                    _ => match solver::resolve(&line, &opt.fixes, &opt.checks, true) {
                         Ok(res) => {
                             let title = common::color(&Color::TIT, "Solution (fraction):");
                             let res_str = common::color(&Color::SUC, &res);
