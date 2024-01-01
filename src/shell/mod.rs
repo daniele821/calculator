@@ -77,7 +77,8 @@ impl Options {
     }
 
     fn as_decimal(&self, num: &BigFraction) -> String {
-        todo!("as_decimal")
+        let prec = self.dec_len as usize;
+        format!("{:.prec$}", num)
     }
 }
 
