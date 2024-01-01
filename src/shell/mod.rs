@@ -112,6 +112,23 @@ impl Options {
         }
     }
 
+    fn show_opt(&self, line: &str) {
+        let args = line.split_whitespace().skip(1).collect::<Vec<_>>();
+        let value = *args.first().unwrap_or(&"");
+        match value {
+            "show-dec" | "show_dec" => println!("show-dec is '{}'", self.show_dec),
+            "dec-len" | "dec_len" => println!("dec-len is '{}'", self.dec_len),
+            "checks" => println!("checks is '{:?}'", self.checks),
+            "fixes" => println!("fixes is '{:?}'", self.fixes),
+            _ => {
+                self.show_opt("show_opt show-dec");
+                self.show_opt("show_opt dec-len");
+                self.show_opt("show_opt checks");
+                self.show_opt("show_opt fixes");
+            }
+        }
+    }
+
     fn as_decimal(&self, num: &BigFraction) -> String {
         let prec = self.dec_len as usize;
         format!("{:.prec$}", num)
@@ -134,6 +151,7 @@ pub fn run() {
                     }
                     "help" => println!("{}", help()),
                     "set" => opt.change(&line),
+                    "show-opt" | "show_opt" => opt.show_opt(&line),
                     _ => match solver::resolve(&line, &opt.fixes, &opt.checks, true) {
                         Ok(res) => {
                             let title = common::color(&Color::TIT, "Solution (fraction):");
@@ -174,10 +192,11 @@ fn help() -> String {
   - exit                => close shell
   - clear               => clear terminal
   - help                => show this help message
-  - set  [opt] [value]  => change options
+  - set* [opt] [value]  => change options
+  - show-opt            => show current options
   - *                   => parse as an expression
 
-Set options:
+*set options:
   - show-dec [true|false]   => show/hide solution as a decimal value
   - dec-len  [(integer)]    => decimal solution precision
   - checks   [none|all]     => change CheckRules
