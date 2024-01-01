@@ -16,6 +16,8 @@ struct Options {
 }
 
 impl Options {
+    const MAX_DEC_LEN: u64 = 100;
+
     fn default() -> Self {
         Self {
             show_dec: true,
@@ -58,7 +60,14 @@ impl Options {
                 _ => {
                     let parsed = args.get(1).unwrap_or(&"").parse::<u64>();
                     match parsed {
-                        Ok(_) => todo!(),
+                        Ok(value) => {
+                            if value > Self::MAX_DEC_LEN {
+                                err(format!("{value} is too big!"));
+                            } else {
+                                self.dec_len = value;
+                                suc(format!("successfully setted 'dec_len' to {value}"));
+                            }
+                        }
                         Err(_) => err(value_err),
                     }
                 }
@@ -128,7 +137,7 @@ fn help() -> String {
   - exit                => close shell
   - clear               => clear terminal
   - help                => show this help message
-  - set   [opt] [value] => change options
+  - set  [opt] [value]  => change options
   - *                   => parse as an expression
 
 Set options:
