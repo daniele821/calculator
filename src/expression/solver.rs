@@ -37,9 +37,7 @@ pub enum FixRules {
     CloseBlocks,
 }
 impl FixRules {
-    pub fn all() -> Vec<Self> {
-        vec![Self::BlockProduct, Self::CloseBlocks]
-    }
+    pub const ALL: [Self; 2] = [Self::BlockProduct, Self::CloseBlocks];
 }
 
 #[derive(Debug, Clone, Eq, PartialEq)]
@@ -58,9 +56,7 @@ pub enum CheckRules {
     DebyFactorial,
 }
 impl CheckRules {
-    pub fn all() -> Vec<Self> {
-        vec![DENY_MLS, DENY_AMS, DENY_DIV, DENY_MOD, DENY_EXP, DENY_FAC]
-    }
+    pub const ALL: [Self; 6] = [DENY_MLS, DENY_AMS, DENY_DIV, DENY_MOD, DENY_EXP, DENY_FAC];
 }
 
 pub fn resolve(
@@ -444,9 +440,9 @@ mod tests {
 
     #[test]
     fn test_next_op() -> Result<(), Error> {
-        let expr1 = parse("12+34*45", &FixRules::all(), &[])?;
-        let expr2 = parse("12+(12)", &FixRules::all(), &[])?;
-        let expr3 = parse("12+(12/34)", &FixRules::all(), &[])?;
+        let expr1 = parse("12+34*45", &FixRules::ALL, &[])?;
+        let expr2 = parse("12+(12)", &FixRules::ALL, &[])?;
+        let expr3 = parse("12+(12/34)", &FixRules::ALL, &[])?;
         assert_eq!(next_operation(&expr1), Some(3));
         assert_eq!(next_operation(&expr2), Some(2));
         assert_eq!(next_operation(&expr3), Some(4));

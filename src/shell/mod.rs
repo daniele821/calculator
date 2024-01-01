@@ -8,6 +8,7 @@ use crate::{
     expression::solver::{self, CheckRules, FixRules},
 };
 
+#[derive(Debug)]
 struct Options {
     /// show result as decimal number
     show_dec: bool,
@@ -19,20 +20,22 @@ struct Options {
     fixes: Vec<FixRules>,
 }
 
-impl Options {
-    const MAX_DEC_LEN: u64 = 100;
-
+impl Default for Options {
     fn default() -> Self {
         Self {
             show_dec: true,
             dec_len: 20,
             checks: vec![],
-            fixes: FixRules::all().to_vec(),
+            fixes: FixRules::ALL.to_vec(),
         }
     }
+}
+
+impl Options {
+    const MAX_DEC_LEN: u64 = 100;
 
     fn change(&mut self, line: &str) {
-        let default = Self::default();
+        let default = Default::default();
         let args = line.split_whitespace().skip(1).collect::<Vec<_>>();
         let opt = *args.first().unwrap_or(&"");
         let value = *args.get(1).unwrap_or(&"");
@@ -40,7 +43,7 @@ impl Options {
         let value_err = format!("'{value}' is not a valid value!");
         match opt {
             "" => {
-                *self = Options::default();
+                *self = default;
                 suc(String::from("successfully resetted all options"));
             }
             "show_dec" | "show-dec" => match value {
@@ -88,7 +91,7 @@ impl Options {
                     suc(String::from("successfully setted 'checks' to none"));
                 }
                 "all" => {
-                    self.checks = CheckRules::all();
+                    self.checks = CheckRules::ALL.to_vec();
                     suc(String::from("successfully setted 'checks' to all"));
                 }
                 "deny-op" | "deny_op" => {
@@ -119,7 +122,7 @@ impl Options {
                     suc(String::from("successfully setted 'fixes' to none"));
                 }
                 "all" => {
-                    self.fixes = FixRules::all();
+                    self.fixes = FixRules::ALL.to_vec();
                     suc(String::from("successfully setted 'fixes' to all"));
                 }
                 _ => err(value_err),
@@ -153,7 +156,7 @@ impl Options {
 
 pub fn run() {
     let mut rl = DefaultEditor::new().unwrap();
-    let mut opt = Options::default();
+    let mut opt: Options = Default::default();
     loop {
         let readline = rl.readline(&common::color(&Color::OTH, ">>> "));
         match readline {
