@@ -78,6 +78,36 @@ impl Options {
                     }
                 }
             },
+            "checks" => match value {
+                "" => {
+                    self.checks = default.checks;
+                    suc(String::from("successfully resetted 'checks'"));
+                }
+                "none" => {
+                    self.checks = vec![];
+                    suc(String::from("successfully setted 'checks' to none"));
+                }
+                "all" => {
+                    self.checks = CheckRules::all();
+                    suc(String::from("successfully setted 'checks' to all"));
+                }
+                _ => err(value_err),
+            },
+            "fixes" => match value {
+                "" => {
+                    self.fixes = default.fixes;
+                    suc(String::from("successfully resetted 'fixes'"));
+                }
+                "none" => {
+                    self.fixes = vec![];
+                    suc(String::from("successfully setted 'fixes' to none"));
+                }
+                "all" => {
+                    self.fixes = FixRules::all();
+                    suc(String::from("successfully setted 'fixes' to all"));
+                }
+                _ => err(value_err),
+            },
             _ => err(opt_err),
         }
     }
@@ -150,6 +180,8 @@ fn help() -> String {
 Set options:
   - show-dec [true|false]   => show/hide solution as a decimal value
   - dec-len  [(integer)]    => decimal solution precision
+  - checks   [none|all]     => change CheckRules
+  - fixes    [none|all]     => change FixRules
 ",
     )
 }
