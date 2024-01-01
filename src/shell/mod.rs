@@ -91,6 +91,22 @@ impl Options {
                     self.checks = CheckRules::all();
                     suc(String::from("successfully setted 'checks' to all"));
                 }
+                "deny-op" | "deny_op" => {
+                    self.checks = vec![
+                        CheckRules::DenyModule,
+                        CheckRules::DenyDivision,
+                        CheckRules::DenyExponent,
+                        CheckRules::DebyFactorial,
+                    ];
+                    suc(String::from("successfully setted 'checks' to deny-op"));
+                }
+                "deny-sign" | "deny_sign" => {
+                    self.checks = vec![
+                        CheckRules::DenyMultipleSign,
+                        CheckRules::DenyAllMultipleSign,
+                    ];
+                    suc(String::from("successfully setted 'checks' to deny-sign"));
+                }
                 _ => err(value_err),
             },
             "fixes" => match value {
@@ -197,10 +213,10 @@ fn help() -> String {
   - *                   => parse as an expression
 
 *set options:
-  - show-dec [true|false]   => show/hide solution as a decimal value
-  - dec-len  [(integer)]    => decimal solution precision
-  - checks   [none|all]     => change CheckRules
-  - fixes    [none|all]     => change FixRules
+  - show-dec [true|false]                       => show/hide solution as a decimal value
+  - dec-len  [(integer)]                        => decimal solution precision
+  - checks   [none|all|deny-sign|deny-op]       => change CheckRules
+  - fixes    [none|all]                         => change FixRules
 ",
     )
 }
