@@ -12,3 +12,4 @@ precise expression solver using fractions
 - v1.2: added "^","!" operators, and checks rules to deny operators which can fail (ie "/","%","!","^")
 - v1.3: added infrastructre for options and added decimal result as an option
 - v1.4: added check/fix rules to configurable options (only None or all, WIP: set each check/fix rule)
+- v1.5: added 'show-opt' command to show current options
