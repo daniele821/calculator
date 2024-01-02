@@ -13,3 +13,4 @@ precise expression solver using fractions
 - v1.3: added infrastructre for options and added decimal result as an option
 - v1.4: added check/fix rules to configurable options (only None or all, WIP: set each check/fix rule)
 - v1.5: added 'show-opt' command to show current options
+- v1.6: added derangement operation 
