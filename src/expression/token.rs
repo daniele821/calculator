@@ -40,6 +40,7 @@ pub enum EndBlock {
 pub enum UnaryOpLeft {
     Neg,
     Pos,
+    Derang,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -131,6 +132,7 @@ impl Display for UnaryOpLeft {
         let str = match self {
             UnaryOpLeft::Neg => "-",
             UnaryOpLeft::Pos => "+",
+            UnaryOpLeft::Derang => "!",
         };
         write!(f, "{str}")
     }
