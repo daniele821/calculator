@@ -18,6 +18,8 @@ struct Options {
     checks: Vec<CheckRules>,
     /// fix rules to apply in calculations
     fixes: Vec<FixRules>,
+    /// explain solver steps
+    explain: bool,
 }
 
 impl Default for Options {
@@ -27,6 +29,7 @@ impl Default for Options {
             dec_len: 20,
             checks: vec![],
             fixes: FixRules::ALL.to_vec(),
+            explain: true,
         }
     }
 }
@@ -127,6 +130,21 @@ impl Options {
                 }
                 _ => err(value_err),
             },
+            "explain" => match value {
+                "" => {
+                    self.explain = default.explain;
+                    suc(String::from("successfully resetted 'explain'"));
+                }
+                "true" => {
+                    self.explain = true;
+                    suc(String::from("successfully setted 'explain' to true"));
+                }
+                "false" => {
+                    self.explain = false;
+                    suc(String::from("successfully setted 'explain' to false"));
+                }
+                _ => err(value_err),
+            },
             _ => err(opt_err),
         }
     }
@@ -139,11 +157,13 @@ impl Options {
             "dec-len" | "dec_len" => println!("dec-len is '{}'", self.dec_len),
             "checks" => println!("checks is '{:?}'", self.checks),
             "fixes" => println!("fixes is '{:?}'", self.fixes),
+            "explain" => println!("explain is '{:?}'", self.explain),
             _ => {
                 self.show_opt("show_opt show-dec");
                 self.show_opt("show_opt dec-len");
                 self.show_opt("show_opt checks");
                 self.show_opt("show_opt fixes");
+                self.show_opt("show_opt explain");
             }
         }
     }
@@ -171,7 +191,7 @@ pub fn run() {
                     "help" => println!("{}", help()),
                     "set" => opt.change(&line),
                     "show-opt" | "show_opt" => opt.show_opt(&line),
-                    _ => match solver::resolve(&line, &opt.fixes, &opt.checks, true) {
+                    _ => match solver::resolve(&line, &opt.fixes, &opt.checks, opt.explain) {
                         Ok(res) => {
                             let title = common::color(&Color::TIT, "Solution (fraction):");
                             let res_str = common::color(&Color::SUC, &res);
@@ -220,6 +240,7 @@ fn help() -> String {
   - dec-len  [(integer)]                        => decimal solution precision
   - checks   [none|all|deny-sign|deny-op]       => change CheckRules
   - fixes    [none|all]                         => change FixRules
+  - explain  [true|false]                       => show/hide solution explanation
 ",
     )
 }
