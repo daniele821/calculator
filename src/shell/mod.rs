@@ -211,11 +211,11 @@ fn help() -> String {
   - exit                => close shell
   - clear               => clear terminal
   - help                => show this help message
-  - set* [opt] [value]  => change options
-  - show-opt            => show current options
+  - set  [opt] [value]  => change options
+  - show-opt  [opt]     => show current options
   - *                   => parse as an expression
 
-*set options:
+     [opt]     [value]      
   - show-dec [true|false]                       => show/hide solution as a decimal value
   - dec-len  [(integer)]                        => decimal solution precision
   - checks   [none|all|deny-sign|deny-op]       => change CheckRules
