@@ -2,7 +2,7 @@ use crate::expression::{
     error::{Error, SolveErr},
     token::{BinaryOp, Token, UnaryOpRight},
 };
-use fraction::{BigFraction, BigInt, BigUint, GenericFraction, Ratio, Sign, Zero};
+use fraction::{BigFraction, BigUint, GenericFraction, Ratio, Sign, Zero};
 
 pub fn disp(first: u64, last: u64) -> BigUint {
     if first == last {
@@ -25,7 +25,7 @@ pub fn to_i32(num: &BigFraction) -> Option<i32> {
             if !ratio.is_integer() {
                 return None;
             }
-            if (ratio.numer() < &BigUint::from(i32::MAX as u32) && sign == &Sign::Minus)
+            if (ratio.numer() > &BigUint::from(i32::MAX as u32 + 1) && sign == &Sign::Minus)
                 || (ratio.numer() > &BigUint::from(i32::MAX as u32) && sign == &Sign::Plus)
             {
                 return None;
@@ -99,8 +99,8 @@ pub fn fact(num: &BigFraction) -> Result<BigFraction, Error> {
         GenericFraction::Rational(_, _) => (),
         _ => None.ok_or_else(err)?,
     }
-    let num_ = to_u64(num).ok_or_else(err)?;
-    Ok(BigFraction::from(disp(1u64, num_)))
+    let num = to_u64(num).ok_or_else(err)?;
+    Ok(BigFraction::from(disp(1u64, num)))
 }
 
 #[cfg(test)]
