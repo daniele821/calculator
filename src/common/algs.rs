@@ -1,25 +1,15 @@
-use std::ops::Add;
-
 use crate::expression::{
     error::{Error, SolveErr},
     token::{BinaryOp, Token, UnaryOpRight},
 };
 use fraction::{BigFraction, BigUint, GenericFraction, Ratio, Sign, Zero};
 
-pub fn disp(first: &BigUint, last: &BigUint) -> BigUint {
-    if first == last {
-        return first.clone();
-    }
-    let mid: BigUint = first + (last - first) / 2u64;
-    disp(first, &mid) * disp(&mid.add(1u64), last)
-}
-
-pub fn disp_small(first: u64, last: u64) -> BigUint {
+pub fn disp(first: u64, last: u64) -> BigUint {
     if first == last {
         return BigUint::from(first);
     }
     let mid = first + (last - first) / 2;
-    disp_small(first, mid) * disp_small(mid + 1, last)
+    disp(first, mid) * disp(mid + 1, last)
 }
 
 pub fn to_ratio(num: &BigFraction) -> Option<Ratio<BigUint>> {
@@ -29,19 +19,7 @@ pub fn to_ratio(num: &BigFraction) -> Option<Ratio<BigUint>> {
     }
 }
 
-pub fn to_biguint(num: &BigFraction) -> Option<BigUint> {
-    match num {
-        fraction::GenericFraction::Rational(_, ratio) => {
-            if !ratio.is_integer() || num.is_sign_negative() {
-                return None;
-            }
-            Some(ratio.numer().clone())
-        }
-        _ => None,
-    }
-}
-
-pub fn to_int(num: &BigFraction) -> Option<i32> {
+pub fn to_i32(num: &BigFraction) -> Option<i32> {
     match num {
         fraction::GenericFraction::Rational(sign, ratio) => {
             if !ratio.is_integer() {
@@ -59,6 +37,26 @@ pub fn to_int(num: &BigFraction) -> Option<i32> {
     }
 }
 
+pub fn to_u64(num: &BigFraction) -> Option<u64> {
+    match num {
+        fraction::GenericFraction::Rational(sign, ratio) => {
+            if !ratio.is_integer() {
+                return None;
+            }
+            if sign == &Sign::Minus {
+                return None;
+            }
+            if ratio.numer() > &BigUint::from(u64::MAX) {
+                return None;
+            }
+            let digits = ratio.numer().to_u64_digits();
+            let first = digits.first().unwrap_or(&0);
+            Some(*first)
+        }
+        _ => None,
+    }
+}
+
 pub fn exp(base: &BigFraction, exp: &BigFraction) -> Result<BigFraction, Error> {
     let err = || {
         SolveErr::OperIllegalValues(vec![
@@ -70,7 +68,7 @@ pub fn exp(base: &BigFraction, exp: &BigFraction) -> Result<BigFraction, Error> 
     if base.is_nan() || base.is_infinite() || exp.is_nan() || exp.is_infinite() {
         None.ok_or_else(err)?;
     }
-    let exp_ = to_int(exp).ok_or_else(err)?;
+    let exp_ = to_i32(exp).ok_or_else(err)?;
     let base_ = to_ratio(base).ok_or_else(err)?;
     let res = base_.pow(exp_);
     let sign = match (
@@ -99,8 +97,8 @@ pub fn fact(num: &BigFraction) -> Result<BigFraction, Error> {
         GenericFraction::Rational(_, _) => (),
         _ => None.ok_or_else(err)?,
     }
-    let num_ = to_biguint(num).ok_or_else(err)?;
-    Ok(BigFraction::from(disp(&BigUint::from(1u32), &num_)))
+    let num_ = to_u64(num).ok_or_else(err)?;
+    Ok(BigFraction::from(disp(1u64, num_)))
 }
 
 #[cfg(test)]
@@ -110,15 +108,8 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_product() {
-        let actual1 = disp(&BigUint::from(4u64), &BigUint::from(6u64));
-        let expected1 = BigUint::from(120u64);
-        assert_eq!(actual1, expected1);
-    }
-
-    #[test]
-    fn test_product_small() {
-        let actual1 = disp_small(4u64, 6u64);
+    fn test_disp() {
+        let actual1 = disp(4u64, 6u64);
         let expected1 = BigUint::from(120u64);
         assert_eq!(actual1, expected1);
     }
