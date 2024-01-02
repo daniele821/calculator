@@ -4,13 +4,11 @@ use crate::{
     common::{self, algs, Color},
     expression::{
         error::{CheckErr, Error, ParseErr, SolveErr},
-        token::{BinaryOp, EndBlock, StartBlock, Token, TokenType, UnaryOpLeft},
+        token::{BinaryOp, EndBlock, StartBlock, Token, TokenType, UnaryOpLeft, UnaryOpRight},
     },
 };
 use fraction::{BigFraction, Zero};
 use std::ops::Neg;
-
-use super::token::UnaryOpRight;
 
 const STA: TokenType = TokenType::StartBlock;
 const END: TokenType = TokenType::EndBlock;
