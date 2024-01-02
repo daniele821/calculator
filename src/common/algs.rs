@@ -2,7 +2,7 @@ use crate::expression::{
     error::{Error, SolveErr},
     token::{BinaryOp, Token, UnaryOpRight},
 };
-use fraction::{BigFraction, BigUint, GenericFraction, Ratio, Sign, Zero};
+use fraction::{BigFraction, BigInt, BigUint, GenericFraction, Ratio, Sign, Zero};
 
 pub fn disp(first: u64, last: u64) -> BigUint {
     if first == last {
@@ -25,11 +25,13 @@ pub fn to_i32(num: &BigFraction) -> Option<i32> {
             if !ratio.is_integer() {
                 return None;
             }
-            let digits = ratio.numer().clone().to_u32_digits();
-            let first = digits.first().unwrap_or(&0);
-            if digits.len() > 1 || first > &(i32::MAX as u32) {
+            if (ratio.numer() < &BigUint::from(i32::MAX as u32) && sign == &Sign::Minus)
+                || (ratio.numer() > &BigUint::from(i32::MAX as u32) && sign == &Sign::Plus)
+            {
                 return None;
             }
+            let digits = ratio.numer().to_u32_digits();
+            let first = digits.first().unwrap_or(&0);
             let sign = if sign == &Sign::Plus { 1 } else { -1 };
             Some(*first as i32 * sign)
         }
