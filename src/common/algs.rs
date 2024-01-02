@@ -120,10 +120,13 @@ pub fn dereng(num: &BigFraction) -> Result<BigFraction, Error> {
     let num = to_u64(num).ok_or_else(err)?;
     let fact_num = fact(&BigFraction::from(num))?;
     let mut res = Zero::zero();
-    for i in 2..=num {
+    for i in 2..num {
         let sign = i as i64 % 2 * -2 + 1;
         let tmp = fact(&BigFraction::from(i))?;
         res += &fact_num / tmp * sign;
+    }
+    if num >= 2 {
+        res += num as i64 % 2 * -2 + 1;
     }
     Ok(res)
 }
