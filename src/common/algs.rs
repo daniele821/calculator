@@ -103,11 +103,28 @@ pub fn fact(num: &BigFraction) -> Result<BigFraction, Error> {
     Ok(BigFraction::from(disp(1u64, num)))
 }
 
+pub fn dereng(num: &BigFraction) -> Result<BigFraction, Error> {
+    if num.is_zero() {
+        return Ok(BigFraction::from(1));
+    }
+    let err = || {
+        SolveErr::OperIllegalValues(vec![
+            Token::Number(num.clone()),
+            Token::from(UnaryOpRight::Fact),
+        ])
+    };
+    match num {
+        GenericFraction::Rational(_, _) => (),
+        _ => None.ok_or_else(err)?,
+    }
+    let num = to_u64(num).ok_or_else(err)?;
+    Ok(BigFraction::from(disp(1u64, num)))
+}
+
 #[cfg(test)]
 mod tests {
-    use std::str::FromStr;
-
     use super::*;
+    use std::str::FromStr;
 
     #[test]
     fn test_disp() {
@@ -131,6 +148,14 @@ mod tests {
     fn test_fact() -> Result<(), Error> {
         let actual1 = fact(&BigFraction::from(10))?;
         let expected1 = BigFraction::from(3628800);
+        assert_eq!(actual1, expected1);
+        Ok(())
+    }
+
+    #[test]
+    fn test_dereng() -> Result<(), Error> {
+        let actual1 = dereng(&BigFraction::from(10))?;
+        let expected1 = BigFraction::from(1334961);
         assert_eq!(actual1, expected1);
         Ok(())
     }

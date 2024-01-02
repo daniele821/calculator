@@ -287,7 +287,7 @@ pub fn solve_next(tokens: &mut Vec<Token>) -> Result<bool, Error> {
             Token::UnaryOperatorLeft(unary) => match unary {
                 UnaryOpLeft::Neg => nums[0].neg(),
                 UnaryOpLeft::Pos => nums[0].clone(),
-                UnaryOpLeft::Derang => todo!("derangement algorithm"),
+                UnaryOpLeft::Derang => algs::dereng(nums[0])?,
             },
             Token::UnaryOperatorRight(unary) => match unary {
                 UnaryOpRight::Fact => algs::fact(nums[0])?,
