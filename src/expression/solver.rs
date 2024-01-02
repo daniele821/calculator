@@ -126,7 +126,13 @@ fn parse_tokens(str: &str) -> Result<Vec<Token>, Error> {
                 | Some(Token::UnaryOperatorRight(_)) => res.push(Token::from(BinaryOp::Sub)),
                 _ => res.push(Token::from(UnaryOpLeft::Neg)),
             },
-            '!' => res.push(Token::from(UnaryOpRight::Fact)),
+            // '!' => res.push(Token::from(UnaryOpRight::Fact)),
+            '!' => match res.last() {
+                Some(Token::Number(_))
+                | Some(Token::EndBlock(_))
+                | Some(Token::UnaryOperatorRight(_)) => res.push(Token::from(UnaryOpRight::Fact)),
+                _ => res.push(Token::from(UnaryOpLeft::Derang)),
+            },
             '^' => res.push(Token::from(BinaryOp::Exp)),
             '*' => res.push(Token::from(BinaryOp::Mul)),
             '/' => res.push(Token::from(BinaryOp::Div)),
