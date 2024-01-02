@@ -118,7 +118,14 @@ pub fn dereng(num: &BigFraction) -> Result<BigFraction, Error> {
         _ => None.ok_or_else(err)?,
     }
     let num = to_u64(num).ok_or_else(err)?;
-    Ok(BigFraction::from(disp(1u64, num)))
+    let fact_num = fact(&BigFraction::from(num))?;
+    let mut res = Zero::zero();
+    for i in 2..=num {
+        let sign = i as i64 % 2 * -2 + 1;
+        let tmp = fact(&BigFraction::from(i))?;
+        res += &fact_num / tmp * sign;
+    }
+    Ok(res)
 }
 
 #[cfg(test)]
