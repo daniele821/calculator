@@ -27,7 +27,8 @@ const DENY_MOD: CheckRules = CheckRules::DenyModule;
 const DENY_MLS: CheckRules = CheckRules::DenyMultipleSign;
 const DENY_AMS: CheckRules = CheckRules::DenyAllMultipleSign;
 const DENY_EXP: CheckRules = CheckRules::DenyExponent;
-const DENY_FAC: CheckRules = CheckRules::DebyFactorial;
+const DENY_FAC: CheckRules = CheckRules::DenyFactorial;
+const DENY_DERANG: CheckRules = CheckRules::DenyDerangement;
 
 #[derive(Debug, Clone, Eq, PartialEq)]
 pub enum FixRules {
@@ -53,10 +54,22 @@ pub enum CheckRules {
     /// deny: "expr ^ int_expr"
     DenyExponent,
     /// deny: "expr !"
-    DebyFactorial,
+    DenyFactorial,
+    /// deny: "! expr"
+    DenyDerangement,
 }
 impl CheckRules {
-    pub const ALL: [Self; 6] = [DENY_MLS, DENY_AMS, DENY_DIV, DENY_MOD, DENY_EXP, DENY_FAC];
+    pub const ALL: [Self; 7] = [
+        DENY_MLS,
+        DENY_AMS,
+        DENY_DIV,
+        DENY_MOD,
+        DENY_EXP,
+        DENY_FAC,
+        DENY_DERANG,
+    ];
+    pub const DENY_OP: [Self; 5] = [DENY_DIV, DENY_MOD, DENY_EXP, DENY_FAC, DENY_DERANG];
+    pub const DENY_SIGN: [Self; 2] = [DENY_MLS, DENY_AMS];
 }
 
 pub fn resolve(
@@ -270,6 +283,7 @@ pub fn solve_next(tokens: &mut Vec<Token>) -> Result<bool, Error> {
             Token::UnaryOperatorLeft(unary) => match unary {
                 UnaryOpLeft::Neg => nums[0].neg(),
                 UnaryOpLeft::Pos => nums[0].clone(),
+                UnaryOpLeft::Derang => todo!("derangement algorithm"),
             },
             Token::UnaryOperatorRight(unary) => match unary {
                 UnaryOpRight::Fact => algs::fact(nums[0])?,

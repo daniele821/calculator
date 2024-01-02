@@ -98,19 +98,11 @@ impl Options {
                     suc(String::from("successfully setted 'checks' to all"));
                 }
                 "deny-op" | "deny_op" => {
-                    self.checks = vec![
-                        CheckRules::DenyModule,
-                        CheckRules::DenyDivision,
-                        CheckRules::DenyExponent,
-                        CheckRules::DebyFactorial,
-                    ];
+                    self.checks = CheckRules::DENY_OP.to_vec();
                     suc(String::from("successfully setted 'checks' to deny-op"));
                 }
                 "deny-sign" | "deny_sign" => {
-                    self.checks = vec![
-                        CheckRules::DenyMultipleSign,
-                        CheckRules::DenyAllMultipleSign,
-                    ];
+                    self.checks = CheckRules::DENY_SIGN.to_vec();
                     suc(String::from("successfully setted 'checks' to deny-sign"));
                 }
                 _ => err(value_err),
